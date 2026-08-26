@@ -3,8 +3,10 @@ const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const SUPABASE_URL = 'https://rntmqjqbmjfcpwbbflyz.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_r6fBc5CmRwlyLhTnk7u6BA_rRA1Pmoj';
-const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-const roundDefault = {v:'home',course:'',courseId:null,holes:18,players:[''],pars:[],scores:{},hole:1,done:false,resumeView:null};
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY,{
+  auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage}
+});
+const roundDefault = {v:'home',course:'',courseId:null,holes:18,players:[''],pars:[],scores:{},hole:1,done:false,resumeView:null,ownerUserId:null};
 let s = JSON.parse(localStorage.atgRound || 'null') || roundDefault;
 if(s.players?.length===1&&s.players[0]==='You'&&['home','setup'].includes(s.v))s.players=[''];
 let courses = [];
@@ -16,24 +18,27 @@ let draft=null,map=null,locationWatch=null;
 let courseSearchResults=[];
 let lastCourseSearch=0;
 let sharedPlayers=[];
+let historyRounds=[],historyDetail=null,historyLoading=false,historyError='';
 const save=()=>{localStorage.atgRound=JSON.stringify(s)};
 const rel=n=>n===0?'E':n>0?'+'+n:n;
 const parTotal=n=>s.pars.slice(0,n).reduce((a,b)=>a+b,0);
 const total=(p,n=s.holes)=>Array.from({length:n},(_,i)=>s.scores[p]?.[i+1]||0).reduce((a,b)=>a+b,0);
 const courseById=id=>courses.find(c=>c.id===id);
 
-function render(){save();stopLocation();if(map){if(draft){const center=map.getCenter();draft.mapView={lat:center.lat,lng:center.lng,zoom:map.getZoom()}}map.remove();map=null}app.className='';({home,setup,pars,round,recap,coursesView,mapCourse}[s.v]||home)();if(s.v!=='home')bottomNav()}
-function home(){const canResume=['setup','pars','round','recap'].includes(s.resumeView)&&!s.done;app.className='home-page';app.innerHTML=`<section class="home-hero"><div class="home-kicker">FAITH · FELLOWSHIP · FAIRWAYS</div><div class="logo-wrap"><img src="agape-golf-logo.png" alt="Agape Tumoutou Golfers logo" class="landing-logo"></div><div class="home-brand">Agape Tumoutou Golfers</div><h1>Saved to <span>Serve</span></h1><p class="scripture"><strong>Who hath saved us, and called us with an holy calling</strong><br><span>... 2 Tim. 1:9</span></p><div class="feature-pills"><span>⛳ Shared Courses</span><span>◎ Live GPS</span><span>＋ Protected Scoring</span></div></section><section class="home-actions">${cloudLoading?'<div class="notice">Loading shared courses…</div>':''}${cloudError?`<div class="error-notice">${esc(cloudError)}</div>`:''}${canResume?'<button class="primary home-primary" onclick="resumeRound()">Resume Round <b>→</b></button><button class="secondary home-secondary" onclick="start()">Start a New Round</button>':`<button class="primary home-primary" onclick="start()" ${cloudLoading?'disabled':''}>Create a Round <b>→</b></button>`}<button class="secondary home-secondary" onclick="joinRound()">Join with Round Code</button><button class="secondary home-secondary" onclick="openCourses()">${adminRole?'Map & Manage Courses':'Explore Shared Courses'}</button>${adminRole==='super_admin'?'<button class="admin-tool" onclick="promoteCourseAdmin()">＋ Add Course Admin</button>':''}<div class="account-bar">${currentUser?`<span class="account-status"><i></i>${adminRole?esc(adminRole.replace('_',' ')):'Golfer signed in'}</span><button class="back" onclick="signOutAdmin()">Sign out</button>`:`<span class="small home-muted">Golfers and course managers</span><button class="back" onclick="signInAccount()">Sign in</button>`}</div></section><footer class="home-footer">Saved to serve · Ready to play</footer>`}
+function render(){save();stopLocation();if(map){if(draft){const center=map.getCenter();draft.mapView={lat:center.lat,lng:center.lng,zoom:map.getZoom()}}map.remove();map=null}app.className='';({home,setup,pars,round,recap,coursesView,mapCourse,accountView,historyView,historyDetailView}[s.v]||home)();if(s.v!=='home')bottomNav()}
+function home(){const canResume=['setup','pars','round','recap'].includes(s.resumeView)&&!s.done;app.className='home-page';app.innerHTML=`<section class="home-hero"><div class="home-kicker">FAITH · FELLOWSHIP · FAIRWAYS</div><div class="logo-wrap"><img src="agape-golf-logo.png" alt="Agape Tumoutou Golfers logo" class="landing-logo"></div><div class="home-brand">Agape Tumoutou Golfers</div><h1>Saved to <span>Serve</span></h1><p class="scripture"><strong>Who hath saved us, and called us with an holy calling</strong><br><span>... 2 Tim. 1:9</span></p><div class="feature-pills"><span>⛳ Shared Courses</span><span>◎ Live GPS</span><span>＋ Protected Scoring</span></div></section><section class="home-actions">${cloudLoading?'<div class="notice">Loading shared courses…</div>':''}${cloudError?`<div class="error-notice">${esc(cloudError)}</div>`:''}${canResume?'<button class="primary home-primary" onclick="resumeRound()">Resume Round <b>→</b></button><button class="secondary home-secondary" onclick="start()">Start a New Round</button>':`<button class="primary home-primary" onclick="start()" ${cloudLoading?'disabled':''}>Create a Round <b>→</b></button>`}<button class="secondary home-secondary" onclick="joinRound()">Join with Round Code</button>${currentUser?'<button class="secondary home-secondary" onclick="openHistory()">Previous Matches</button>':''}<button class="secondary home-secondary" onclick="openCourses()">${adminRole?'Map & Manage Courses':'Explore Shared Courses'}</button>${adminRole==='super_admin'?'<button class="admin-tool" onclick="promoteCourseAdmin()">＋ Add Course Admin</button>':''}<div class="account-bar">${currentUser?`<span class="account-status"><i></i>${adminRole?esc(adminRole.replace('_',' ')):'Golfer signed in'}</span><button class="back" onclick="accountAction()">Account</button>`:`<span class="small home-muted">Golfers and course managers</span><button class="back" onclick="signInAccount()">Sign in</button>`}</div></section><footer class="home-footer">Saved to serve · Ready to play</footer>`}
 function bottomNav(){app.insertAdjacentHTML('beforeend',`<nav class="bottom-nav" aria-label="Main navigation"><button onclick="goHome()"><span>⌂</span>Home</button><button onclick="openCoursesFromNav()"><span>⛳</span>Courses</button><button onclick="accountAction()"><span>${currentUser?'●':'♙'}</span>${currentUser?'Account':'Login'}</button></nav>`)}
 function rememberRoundView(){if(['setup','pars','round','recap'].includes(s.v)&&!s.done)s.resumeView=s.v}
 function goHome(){rememberRoundView();s.v='home';render()}
 async function resumeRound(){if(s.sharedRoundId)await loadSharedRound(false);s.v=s.resumeView||'round';render()}
 function openCoursesFromNav(){rememberRoundView();s.v='coursesView';render()}
-async function accountAction(){if(!currentUser){await signInAccount();return}if(confirm(`Signed in as ${adminRole?adminRole.replace('_',' '):'golfer'}.\n\nWould you like to sign out?`))await signOutAdmin()}
+async function accountAction(){if(!currentUser){await signInAccount();return}rememberRoundView();s.v='accountView';render()}
+function accountView(){if(!currentUser){s.v='home';render();return}app.innerHTML=`<button class="back" onclick="goHome()">← Back</button><h1>My Account</h1><section class="profile-card"><div class="profile-icon">♙</div><div><b>${esc(currentUser.email||'Golfer')}</b><div class="small muted">${adminRole?esc(adminRole.replace('_',' ')):'Golfer account'}</div></div></section><div class="notice remember-notice">✓ You will stay signed in securely on this device until you choose Sign Out.</div><button class="primary" onclick="openHistory()">View Previous Matches</button>${adminRole==='super_admin'?'<button class="secondary" onclick="promoteCourseAdmin()">Add Course Admin</button>':''}<button class="secondary danger-button" onclick="signOutAdmin()">Sign Out</button>`}
 async function initializeCloud(){
   cloudLoading=true;render();
   const {data:{session}}=await db.auth.getSession();
   currentUser=session?.user||null;
+  if(s.ownerUserId&&s.ownerUserId!==currentUser?.id)s={...roundDefault};
   await loadAdminRole();
   await loadCourses();
   cloudLoading=false;render();
@@ -72,7 +77,7 @@ async function signInAccount(){
   if(!data.session){alert('Account created. Check your email and confirm it, then return and sign in.');return false}
   currentUser=data.user;await loadAdminRole();render();return true;
 }
-async function signOutAdmin(){await db.auth.signOut();currentUser=null;adminRole=null;s.v='home';render()}
+async function signOutAdmin(){await db.auth.signOut();currentUser=null;adminRole=null;historyRounds=[];historyDetail=null;s={...roundDefault};render()}
 async function promoteCourseAdmin(){
   if(adminRole!=='super_admin'){alert('Only a super admin can add course administrators.');return}
   const email=prompt('Enter the email of an existing app user:');
@@ -82,7 +87,7 @@ async function promoteCourseAdmin(){
   if(error){alert('Administrator was not added: '+error.message);return}
   alert(`${data.email} is now a course administrator.`);
 }
-async function start(){if(!currentUser){alert('Each golfer needs an account so scores can be protected. Please sign in or create an account first.');await signInAccount();if(!currentUser)return}if(s.resumeView&&!s.done&&!confirm('Start a new round? Your unfinished round will be replaced.'))return;s={...roundDefault,v:'setup',players:[''],scores:{},pars:[],resumeView:'setup',sharedRoundId:null,joinCode:null};render()}
+async function start(){if(!currentUser){alert('Each golfer needs an account so scores can be protected. Please sign in or create an account first.');await signInAccount();if(!currentUser)return}if(s.resumeView&&!s.done&&!confirm('Start a new round? Your unfinished round will be replaced.'))return;s={...roundDefault,v:'setup',players:[''],scores:{},pars:[],resumeView:'setup',sharedRoundId:null,joinCode:null,ownerUserId:currentUser.id};render()}
 function setup(){const options=courses.map(c=>`<option value="${esc(c.id)}" ${s.courseId===c.id?'selected':''}>${esc(c.name)} (${c.holes} holes)</option>`).join('');app.innerHTML=`<button class="back" onclick="goHome()">← Back</button><h1>Create a Round</h1><p class="muted">You will receive a code for the other golfers after setting the pars.</p><label>Saved course</label><select id="savedCourse" onchange="chooseCourse(this.value)"><option value="">Custom scorecard without GPS</option>${options}</select>${s.courseId?`<div class="notice">GPS green markers are available for this course.</div>`:`<label>Course name</label><input id="course" value="${esc(s.course)}" placeholder="e.g., Oak Valley Golf Club"><label>How many holes?</label><div class="row"><button class="choice ${s.holes===9?'on':''}" onclick="setHoles(9)">9 Holes</button><button class="choice ${s.holes===18?'on':''}" onclick="setHoles(18)">18 Holes</button></div>`}<label>Your player name</label><input aria-label="Your player name" value="${esc(s.players[0]||'')}" placeholder="Enter your name" oninput="updatePlayer(0,this.value)"><div class="notice">Each additional golfer will join on their own phone and enter their own name.</div><button class="primary" onclick="goPars()">Continue</button>`}
 function chooseCourse(id){const c=courseById(id);if(c){s.courseId=c.id;s.course=c.name;s.holes=c.holes;s.pars=[...c.pars]}else{s.courseId=null;s.course='';s.pars=[]}render()}
 function setHoles(n){s.holes=n;render()}
@@ -107,7 +112,7 @@ async function joinRound(){
   const name=prompt('Enter your player name:');if(!name?.trim())return;
   const {data,error}=await db.rpc('join_shared_round',{p_join_code:code.trim(),p_display_name:name.trim()});
   if(error){alert('Could not join round: '+error.message);return}
-  s={...roundDefault,v:'round',players:[name.trim()],scores:{},sharedRoundId:data.round_id,joinCode:data.join_code,resumeView:'round'};
+  s={...roundDefault,v:'round',players:[name.trim()],scores:{},sharedRoundId:data.round_id,joinCode:data.join_code,resumeView:'round',ownerUserId:currentUser.id};
   await loadSharedRound(false);render();
 }
 async function loadSharedRound(showError=true){
@@ -124,6 +129,57 @@ async function loadSharedRound(showError=true){
   return true;
 }
 async function refreshSharedRound(){if(await loadSharedRound())render()}
+async function openHistory(){
+  if(!currentUser){alert('Please sign in to view your previous matches.');await signInAccount();if(!currentUser)return}
+  rememberRoundView();s.v='historyView';historyLoading=true;historyError='';render();
+  await loadMatchHistory();historyLoading=false;render();
+}
+async function loadMatchHistory(){
+  historyRounds=[];historyError='';
+  const memberships=await db.from('round_players').select('round_id,display_name,joined_at').eq('user_id',currentUser.id).order('joined_at',{ascending:false});
+  if(memberships.error){historyError='Your match history could not be loaded. Please try again.';return}
+  const roundIds=(memberships.data||[]).map(x=>x.round_id);
+  if(!roundIds.length)return;
+  const [roundResult,scoreResult]=await Promise.all([
+    db.from('shared_rounds').select('id,join_code,course_name,holes,pars,status,created_at').in('id',roundIds),
+    db.from('round_scores').select('round_id,hole,strokes').eq('user_id',currentUser.id).in('round_id',roundIds)
+  ]);
+  if(roundResult.error||scoreResult.error){historyError='Your match history could not be loaded. Please try again.';return}
+  const roundsById=new Map((roundResult.data||[]).map(x=>[x.id,x]));
+  historyRounds=(memberships.data||[]).map(membership=>{
+    const match=roundsById.get(membership.round_id);if(!match)return null;
+    const scores=(scoreResult.data||[]).filter(x=>x.round_id===membership.round_id);
+    const score=scores.reduce((sum,x)=>sum+x.strokes,0),complete=scores.length>=match.holes;
+    const par=(match.pars||[]).reduce((sum,x)=>sum+Number(x||0),0);
+    return {...match,displayName:membership.display_name,joinedAt:membership.joined_at,score,scoreCount:scores.length,complete,relative:complete?score-par:null};
+  }).filter(Boolean).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+}
+function formatMatchDate(value){return new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric',year:'numeric'}).format(new Date(value))}
+function historyView(){
+  if(!currentUser){app.innerHTML='<button class="back" onclick="goHome()">← Back</button><h1>Previous Matches</h1><div class="notice">Sign in to see your saved matches.</div><button class="primary" onclick="signInAccount()">Sign In</button>';return}
+  app.innerHTML=`<button class="back" onclick="accountAction()">← Account</button><div class="row"><div><h1>Previous Matches</h1><p class="muted">Every round played with this login is saved here.</p></div>${!historyLoading?'<button class="locate" onclick="openHistory()">Refresh</button>':''}</div>${historyLoading?'<div class="history-loading">Loading your matches…</div>':''}${historyError?`<div class="error-notice">${esc(historyError)}</div>`:''}${!historyLoading&&!historyError&&!historyRounds.length?'<div class="empty history-empty"><b>No matches yet</b><span>Your completed and in-progress rounds will appear here.</span></div>':''}${historyRounds.map(match=>`<article class="history-card"><div class="history-top"><div><span class="history-date">${esc(formatMatchDate(match.created_at))}</span><h2>${esc(match.course_name)}</h2><span class="small muted">${match.holes} holes · ${esc(match.displayName)}</span></div><div class="history-score"><b>${match.score||'–'}</b><span>${match.complete?rel(match.relative):`${match.scoreCount}/${match.holes}`}</span></div></div><div class="history-bottom"><span class="status-chip ${match.complete?'complete':'progress'}">${match.complete?'Complete':'In progress'}</span><button class="back" onclick="openHistoryRound('${esc(match.id)}')">View scorecard →</button></div></article>`).join('')}`;
+}
+async function openHistoryRound(roundId){
+  historyLoading=true;historyError='';historyDetail=null;s.v='historyDetailView';render();
+  const [roundResult,playersResult,scoresResult]=await Promise.all([
+    db.from('shared_rounds').select('id,course_name,holes,pars,created_at').eq('id',roundId).single(),
+    db.from('round_players').select('user_id,display_name,joined_at').eq('round_id',roundId).order('joined_at'),
+    db.from('round_scores').select('user_id,hole,strokes').eq('round_id',roundId)
+  ]);
+  historyLoading=false;
+  if(roundResult.error||playersResult.error||scoresResult.error){historyError='This scorecard could not be loaded.';render();return}
+  historyDetail={round:roundResult.data,players:playersResult.data||[],scores:scoresResult.data||[]};render();
+}
+function historyDetailView(){
+  if(historyLoading){app.innerHTML='<button class="back" onclick="openHistory()">← Matches</button><div class="history-loading">Loading scorecard…</div>';return}
+  if(historyError||!historyDetail){app.innerHTML=`<button class="back" onclick="openHistory()">← Matches</button><h1>Match Scorecard</h1><div class="error-notice">${esc(historyError||'Scorecard unavailable.')}</div>`;return}
+  const match=historyDetail.round,players=historyDetail.players,scores=historyDetail.scores,pars=match.pars||[];
+  const playerScore=(userId,hole)=>scores.find(x=>x.user_id===userId&&x.hole===hole)?.strokes;
+  const playerTotal=userId=>scores.filter(x=>x.user_id===userId).reduce((sum,x)=>sum+x.strokes,0);
+  const playerComplete=userId=>scores.filter(x=>x.user_id===userId).length>=match.holes;
+  const fullPar=pars.reduce((sum,x)=>sum+Number(x||0),0);
+  app.innerHTML=`<button class="back" onclick="openHistory()">← Matches</button><h1>${esc(match.course_name)}</h1><p class="muted">${esc(formatMatchDate(match.created_at))} · ${match.holes} holes</p><div class="table-wrap"><table><thead><tr><th>Player</th>${pars.map((_,i)=>`<th>${i+1}</th>`).join('')}<th>Total</th><th>+/−</th></tr></thead><tbody>${players.map(player=>{const score=playerTotal(player.user_id),complete=playerComplete(player.user_id);return`<tr><td><b>${esc(player.display_name)}${player.user_id===currentUser?.id?' (You)':''}</b></td>${pars.map((_,i)=>`<td>${playerScore(player.user_id,i+1)||'–'}</td>`).join('')}<td>${score||'–'}</td><td class="green">${complete?rel(score-fullPar):'–'}</td></tr>`}).join('')}<tr><td><b>Par</b></td>${pars.map(x=>`<td>${x}</td>`).join('')}<td>${fullPar}</td><td>E</td></tr></tbody></table></div><div class="notice">Previous scorecards are read-only. Each golfer’s saved scores remain protected by their account.</div>`;
+}
 function scoreValue(p){return s.scores[p]?.[s.hole]||0}
 function round(){const h=s.hole,p=s.pars[h-1],pt=parTotal(h),c=courseById(s.courseId),green=c?.greens?.[h-1];app.innerHTML=`<div class="row"><div><div class="brand small-brand">Agape Tumoutou Golfers</div><span class="small muted">${esc(s.course)}</span></div><button class="back" onclick="openScorecard()">Scorecard</button></div>${s.joinCode?`<div class="round-code">Round code <b>${esc(s.joinCode)}</b><button onclick="copyRoundCode()">Copy</button></div>`:''}<section class="hole"><div class="eyebrow">Hole ${h} of ${s.holes} · Par ${p}</div><h1>Enter your score</h1></section>${green?yardagePanel():`<div class="notice">No GPS markers for this hole. Add them from Map & Manage Courses.</div>`}${s.players.map(x=>{const mine=isMyPlayer(x);return`<div class="card score ${mine?'my-score':''}"><div><b>${esc(x)}${mine?' (You)':''}</b><div class="small muted">Total ${total(x,h)} · ${rel(total(x,h)-pt)}</div></div>${mine?`<div class="stepper"><button onclick="changeScore('${encodeURIComponent(x)}',-1)">−</button><span>${scoreValue(x)||'–'}</span><button onclick="changeScore('${encodeURIComponent(x)}',1)">+</button></div>`:`<span class="locked-score">${scoreValue(x)||'–'} 🔒</span>`}<span class="green">${scoreValue(x)?rel(scoreValue(x)-p):''}</span></div>`}).join('')}<div class="row"><button class="secondary half" onclick="prev()">Previous</button><button class="primary fit" onclick="next()">${h===s.holes?'Finish':'Next Hole →'}</button></div>`;if(green)startLocation(green)}
 function yardagePanel(){return`<section class="gps-card"><div class="row"><div><b>Live GPS Yardage</b><div id="gpsStatus" class="small muted">Requesting your location…</div></div><button class="locate" onclick="refreshLocation()">Refresh</button></div><div class="yardages"><div><span id="frontYards">–</span><small>Front</small></div><div class="center-yard"><span id="centerYards">–</span><small>Center</small></div><div><span id="backYards">–</span><small>Back</small></div></div></section>`}

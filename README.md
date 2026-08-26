@@ -7,6 +7,9 @@ A mobile-first group golf scorecard with custom course mapping and live GPS yard
 - Protected 9- and 18-hole shared group scoring
 - Six-character round codes for joining from separate phones
 - Each signed-in golfer can edit only their own scores
+- Persistent golfer login on trusted devices without storing passwords in app code
+- Previous Matches history tied to each golfer account
+- Read-only full-group scorecards for past and in-progress matches
 - Editable player names with no forced "You" label
 - Front, center and back green mapping
 - Course-name and street-address map search
@@ -30,3 +33,5 @@ Mapped courses and protected shared-round scores are stored in Supabase. Automat
 Run `supabase-admin-promotion.sql` once in the Supabase SQL Editor to enable the super-admin-only Add Course Admin control.
 
 Run `supabase-shared-rounds.sql` once in the Supabase SQL Editor to enable golfer accounts, round codes and score ownership. Each golfer must create or sign in to their own account before creating or joining a round.
+
+No additional SQL is required for match history. It reads each golfer's existing protected round membership and scores from the shared-round tables.
