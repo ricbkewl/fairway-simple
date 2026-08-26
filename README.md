@@ -7,6 +7,8 @@ A mobile-first group golf scorecard with custom course mapping and live GPS yard
 - 9- and 18-hole group scoring
 - Custom courses saved in the browser
 - Front, center and back green mapping
+- Course-name and street-address map search
+- Map position retained while moving between holes
 - Live GPS yardages during a round
 - Shared Supabase course library
 - Administrator-only course editing
