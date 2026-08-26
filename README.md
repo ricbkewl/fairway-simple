@@ -21,6 +21,7 @@ A mobile-first group golf scorecard with custom course mapping and live GPS yard
 - Persistent Home, Courses and Account navigation
 - Resume an unfinished round after visiting the Home screen
 - Mobile-friendly GitHub Pages deployment
+- Custom Agape Golf home-screen icon for iPhone and Android
 
 ## Deploy
 

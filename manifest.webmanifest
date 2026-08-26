@@ -1,0 +1,30 @@
+{
+  "name": "Agape Tumoutou Golfers",
+  "short_name": "Agape Golf",
+  "description": "Shared golf GPS, protected scoring and match history for Agape Tumoutou Golfers.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#064c32",
+  "theme_color": "#064c32",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
