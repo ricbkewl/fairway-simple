@@ -23,6 +23,7 @@ let sharedPlayers=[];
 let historyRounds=[],historyDetail=null,historyLoading=false,historyError='';
 let clubDistances={},clubProfileError='';
 let roundChannel=null,subscribedRoundId=null,realtimeTimer=null;
+let chatMessages=[],chatTimer=null;
 let pendingScores=JSON.parse(localStorage.atgPendingScores||'{}');
 let scoreSyncPromise=null;
 let recoveryMode=false;
@@ -32,9 +33,9 @@ const parTotal=n=>s.pars.slice(0,n).reduce((a,b)=>a+b,0);
 const total=(p,n=s.holes)=>Array.from({length:n},(_,i)=>s.scores[p]?.[i+1]||0).reduce((a,b)=>a+b,0);
 const courseById=id=>courses.find(c=>c.id===id);
 
-function render(){save();stopLocation();if(map){if(draft){const center=map.getCenter();draft.mapView={lat:center.lat,lng:center.lng,zoom:map.getZoom()}}map.remove();map=null}app.className='';({home,setup,pars,round,recap,coursesView,mapCourse,accountView,historyView,historyDetailView,clubsView}[s.v]||home)();if(s.v!=='home')bottomNav()}
+function render(){save();stopLocation();if(map){if(draft){const center=map.getCenter();draft.mapView={lat:center.lat,lng:center.lng,zoom:map.getZoom()}}map.remove();map=null}app.className='';({home,setup,pars,round,recap,coursesView,mapCourse,accountView,historyView,historyDetailView,clubsView,chatView}[s.v]||home)();if(s.v!=='home')bottomNav()}
 function home(){const canResume=['setup','pars','round','recap'].includes(s.resumeView)&&!s.done;app.className='home-page';app.innerHTML=`<section class="home-hero"><div class="home-kicker">FAITH · FELLOWSHIP · FAIRWAYS</div><div class="logo-wrap"><img src="agape-golf-logo.png" alt="Agape Tumoutou Golfers logo" class="landing-logo"></div><div class="home-brand">Agape Tumoutou Golfers</div><h1>Saved to <span>Serve</span></h1><p class="scripture"><strong>Who hath saved us, and called us with an holy calling</strong><br><span>... 2 Tim. 1:9</span></p><div class="feature-pills"><span>⛳ Shared Courses</span><span>◎ Live GPS</span><span>＋ Protected Scoring</span></div></section><section class="home-actions">${cloudLoading?'<div class="notice">Loading shared courses…</div>':''}${cloudError?`<div class="error-notice">${esc(cloudError)}</div>`:''}${canResume?'<button class="primary home-primary" onclick="resumeRound()">Resume Round <b>→</b></button><button class="secondary home-secondary" onclick="start()">Start a New Round</button>':`<button class="primary home-primary" onclick="start()" ${cloudLoading?'disabled':''}>Create a Round <b>→</b></button>`}<button class="secondary home-secondary" onclick="joinRound()">Join with Round Code</button>${!currentUser?'<button class="secondary home-secondary" onclick="createAccount()">Create Golfer Account</button>':''}${currentUser?'<button class="secondary home-secondary" onclick="openHistory()">Previous Matches</button>':''}<button class="secondary home-secondary" onclick="openCourses()">${adminRole?'Map & Manage Courses':'Explore Shared Courses'}</button>${adminRole==='super_admin'?'<button class="admin-tool" onclick="promoteCourseAdmin()">＋ Add Course Admin</button>':''}<div class="account-bar">${currentUser?`<span class="account-status"><i></i>${adminRole?esc(adminRole.replace('_',' ')):'Golfer signed in'}</span><button class="back" onclick="accountAction()">Account</button>`:`<span class="small home-muted">Already registered?</span><span><button class="back" onclick="signInAccount()">Sign in</button> · <button class="back" onclick="forgotPassword()">Forgot password?</button></span>`}</div></section><footer class="home-footer">Saved to serve · Ready to play</footer>`}
-function bottomNav(){app.insertAdjacentHTML('beforeend',`<nav class="bottom-nav" aria-label="Main navigation"><button onclick="goHome()"><span>⌂</span>Home</button><button onclick="openCoursesFromNav()"><span>⛳</span>Courses</button><button onclick="accountAction()"><span>${currentUser?'●':'♙'}</span>${currentUser?'Account':'Login'}</button></nav>`)}
+function bottomNav(){app.insertAdjacentHTML('beforeend',`<nav class="bottom-nav ${s.sharedRoundId?'has-chat':''}" aria-label="Main navigation"><button onclick="goHome()"><span>⌂</span>Home</button><button onclick="openCoursesFromNav()"><span>⛳</span>Courses</button>${s.sharedRoundId?'<button onclick="openRoundChat()"><span>💬</span>Chat</button>':''}<button onclick="accountAction()"><span>${currentUser?'●':'♙'}</span>${currentUser?'Account':'Login'}</button></nav>`)}
 function rememberRoundView(){if(['setup','pars','round','recap'].includes(s.v)&&!s.done)s.resumeView=s.v}
 function goHome(){rememberRoundView();s.v='home';render()}
 async function resumeRound(){if(s.sharedRoundId)await loadSharedRound(false);s.v=s.resumeView||'round';render()}
@@ -230,6 +231,7 @@ async function syncPendingScores(){
   try{return await scoreSyncPromise}finally{scoreSyncPromise=null}
 }
 function scheduleRealtimeRefresh(){clearTimeout(realtimeTimer);realtimeTimer=setTimeout(async()=>{if(!s.sharedRoundId)return;await loadSharedRound(false);if(['round','recap'].includes(s.v))render()},350)}
+function scheduleChatRefresh(){clearTimeout(chatTimer);chatTimer=setTimeout(async()=>{if(!s.sharedRoundId)return;await loadRoundMessages(false);if(s.v==='chatView')render()},250)}
 function subscribeToRound(roundId){
   if(!roundId||subscribedRoundId===roundId)return;
   stopRoundRealtime();subscribedRoundId=roundId;
@@ -237,9 +239,10 @@ function subscribeToRound(roundId){
     .on('postgres_changes',{event:'*',schema:'public',table:'round_scores',filter:`round_id=eq.${roundId}`},scheduleRealtimeRefresh)
     .on('postgres_changes',{event:'*',schema:'public',table:'round_players',filter:`round_id=eq.${roundId}`},scheduleRealtimeRefresh)
     .on('postgres_changes',{event:'*',schema:'public',table:'shared_rounds',filter:`id=eq.${roundId}`},scheduleRealtimeRefresh)
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'round_messages',filter:`round_id=eq.${roundId}`},scheduleChatRefresh)
     .subscribe();
 }
-async function stopRoundRealtime(){clearTimeout(realtimeTimer);const channel=roundChannel;roundChannel=null;subscribedRoundId=null;if(channel)await db.removeChannel(channel)}
+async function stopRoundRealtime(){clearTimeout(realtimeTimer);clearTimeout(chatTimer);const channel=roundChannel;roundChannel=null;subscribedRoundId=null;if(channel)await db.removeChannel(channel)}
 async function openHistory(){
   if(!currentUser){alert('Please sign in to view your previous matches.');await signInAccount();if(!currentUser)return}
   rememberRoundView();s.v='historyView';historyLoading=true;historyError='';render();
@@ -320,6 +323,28 @@ function showRoundQr(){
   else $('roundQr').innerHTML='<div class="notice">QR generator unavailable. Use Share Join Link instead.</div>';
 }
 async function shareRoundLink(){const text=`Join my Agape Tumoutou Golfers round. Code: ${s.joinCode}`;if(navigator.share){try{await navigator.share({title:'Join Golf Round',text,url:roundJoinUrl()});return}catch(error){if(error.name==='AbortError')return}}navigator.clipboard?.writeText(roundJoinUrl()).then(()=>alert('Join link copied.')).catch(()=>alert(roundJoinUrl()))}
+async function openRoundChat(){
+  if(!s.sharedRoundId||!currentUser){alert('Join a round before opening its chat.');return}
+  await loadRoundMessages();s.v='chatView';render();
+}
+async function loadRoundMessages(showError=true){
+  if(!s.sharedRoundId||!currentUser)return false;
+  const {data,error}=await db.from('round_messages').select('id,user_id,message,created_at').eq('round_id',s.sharedRoundId).order('created_at').limit(200);
+  if(error){if(showError)alert('Round chat could not be loaded. Make sure the Supabase chat upgrade has been installed.');return false}
+  chatMessages=data||[];return true;
+}
+function chatView(){
+  const nameFor=userId=>sharedPlayers.find(player=>player.user_id===userId)?.display_name||'Golfer';
+  app.innerHTML=`<div class="row"><button class="back" onclick="s.v='round';render()">← Round</button><button class="back" onclick="loadRoundMessages().then(()=>render())">Refresh</button></div><h1>Round Chat</h1><p class="muted">Only golfers in this round can see these messages.</p><section id="chatMessages" class="chat-messages">${chatMessages.length?chatMessages.map(item=>`<article class="chat-bubble ${item.user_id===currentUser.id?'mine':''}"><b>${esc(nameFor(item.user_id))}</b><p>${esc(item.message)}</p><small>${new Date(item.created_at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</small></article>`).join(''):'<div class="empty">No messages yet. Say hello to the group!</div>'}</section><form class="chat-compose" onsubmit="event.preventDefault();sendRoundMessage()"><input id="chatInput" maxlength="500" autocomplete="off" placeholder="Message everyone in this round" aria-label="Chat message"><button type="submit">Send</button></form>`;
+  setTimeout(()=>{const box=$('chatMessages');if(box)box.scrollTop=box.scrollHeight},0);
+}
+async function sendRoundMessage(){
+  const input=$('chatInput'),message=input?.value.trim();if(!message)return;
+  input.disabled=true;
+  const {error}=await db.from('round_messages').insert({round_id:s.sharedRoundId,user_id:currentUser.id,message});
+  if(error){input.disabled=false;alert('Message could not be sent: '+error.message);return}
+  input.value='';await loadRoundMessages(false);render();
+}
 function recap(){app.innerHTML=`<button class="back" onclick="s.v='round';render()">← Back to round</button><div class="row"><div><h1>${s.done?'Round Complete':'Live Scorecard'}</h1><p class="muted">${esc(s.course)} · ${s.holes} holes</p></div>${s.sharedRoundId?'<button class="locate" onclick="refreshSharedRound()">Refresh</button>':''}</div><div class="table-wrap"><table><thead><tr><th>Player</th>${s.pars.map((_,i)=>`<th>${i+1}</th>`).join('')}<th>Total</th><th>+/−</th></tr></thead><tbody>${s.players.map(x=>`<tr><td><b>${esc(x)}${isMyPlayer(x)?' (You)':''}</b></td>${s.pars.map((_,i)=>`<td>${s.scores[x]?.[i+1]||'–'}</td>`).join('')}<td>${total(x)||'–'}</td><td class="green">${total(x)?rel(total(x)-parTotal(s.holes)):'–'}</td></tr>`).join('')}<tr><td><b>Par</b></td>${s.pars.map(x=>`<td>${x}</td>`).join('')}<td>${parTotal(s.holes)}</td><td>E</td></tr></tbody></table></div><button class="primary" onclick="finishRound()">Done</button>`}
 function finishRound(){s.resumeView=null;s.v='home';render()}
 function openCourses(){s.v='coursesView';render()}
