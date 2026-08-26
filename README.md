@@ -24,6 +24,11 @@ A mobile-first group golf scorecard with custom course mapping and live GPS yard
 - Custom Agape Golf home-screen icon for iPhone and Android
 - Private My Clubs carry-distance profile for every golfer
 - Live personalized club suggestions based on center-green GPS distance
+- Password recovery and in-app password changes
+- Automatic live score and player updates using Supabase Realtime
+- Offline score queue with automatic synchronization after reconnecting
+- QR-code and share-link round joining
+- Offline app-shell and saved-course fallback after the first successful load
 
 ## Deploy
 
@@ -39,4 +44,4 @@ Run `supabase-shared-rounds.sql` once in the Supabase SQL Editor to enable golfe
 
 No additional SQL is required for match history. It reads each golfer's existing protected round membership and scores from the shared-round tables.
 
-Run `supabase-club-suggestions.sql` once in the Supabase SQL Editor to enable private carry-distance profiles and personalized live club recommendations.
+Run `supabase-four-upgrades.sql` once in the Supabase SQL Editor. It safely enables private carry-distance profiles and live round updates, even if the earlier club-distance SQL was already installed. In Supabase Authentication URL Configuration, set the Site URL to `https://rickbewl.github.io/fairway-simple/` and add the same address to Redirect URLs so password-recovery links return to the app.
