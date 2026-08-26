@@ -301,11 +301,17 @@ function prev(){if(s.hole>1){s.hole--;render()}}
 function next(){if(s.hole<s.holes){s.hole++;render()}else{s.done=true;s.v='recap';render()}}
 async function openScorecard(){if(s.sharedRoundId)await loadSharedRound(false);s.v='recap';render()}
 function copyRoundCode(){navigator.clipboard?.writeText(s.joinCode).then(()=>alert('Round code copied.')).catch(()=>alert('Round code: '+s.joinCode))}
-function roundJoinUrl(){return APP_URL+'?join='+encodeURIComponent(s.joinCode)}
+function roundJoinUrl(){
+  const base=new URL('./',window.location.href);
+  base.search='';
+  base.hash='';
+  base.searchParams.set('join',s.joinCode);
+  return base.href;
+}
 function showRoundQr(){
   if(!s.joinCode)return;
   const overlay=document.createElement('div');overlay.className='qr-overlay';overlay.onclick=event=>{if(event.target===overlay)overlay.remove()};
-  overlay.innerHTML=`<section class="qr-modal"><button class="qr-close" onclick="this.closest('.qr-overlay').remove()">×</button><h2>Scan to Join</h2><p class="muted">Open the camera on another golfer's phone.</p><div id="roundQr"></div><b class="qr-code-text">${esc(s.joinCode)}</b><button class="secondary" onclick="shareRoundLink()">Share Join Link</button></section>`;
+  overlay.innerHTML=`<section class="qr-modal"><button class="qr-close" onclick="this.closest('.qr-overlay').remove()">×</button><h2>Scan to Join</h2><p class="muted">Open the camera on another golfer's phone.</p><div id="roundQr"></div><b class="qr-code-text">${esc(s.joinCode)}</b><p class="small muted">${esc(roundJoinUrl())}</p><button class="secondary" onclick="shareRoundLink()">Share Join Link</button></section>`;
   document.body.appendChild(overlay);
   if(window.QRCode)new QRCode($('roundQr'),{text:roundJoinUrl(),width:220,height:220,colorDark:'#123f2b',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
   else $('roundQr').innerHTML='<div class="notice">QR generator unavailable. Use Share Join Link instead.</div>';
