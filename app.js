@@ -6,6 +6,7 @@ const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_r6fBc5CmRwlyLhTnk7u6BA_rRA1Pmoj
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY,{
   auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage}
 });
+const CLUBS=['Driver','3 Wood','5 Wood','7 Wood','2 Hybrid','3 Hybrid','4 Hybrid','5 Hybrid','2 Iron','3 Iron','4 Iron','5 Iron','6 Iron','7 Iron','8 Iron','9 Iron','Pitching Wedge','Gap Wedge','Sand Wedge','Lob Wedge'];
 const roundDefault = {v:'home',course:'',courseId:null,holes:18,players:[''],pars:[],scores:{},hole:1,done:false,resumeView:null,ownerUserId:null};
 let s = JSON.parse(localStorage.atgRound || 'null') || roundDefault;
 if(s.players?.length===1&&s.players[0]==='You'&&['home','setup'].includes(s.v))s.players=[''];
@@ -19,13 +20,14 @@ let courseSearchResults=[];
 let lastCourseSearch=0;
 let sharedPlayers=[];
 let historyRounds=[],historyDetail=null,historyLoading=false,historyError='';
+let clubDistances={},clubProfileError='';
 const save=()=>{localStorage.atgRound=JSON.stringify(s)};
 const rel=n=>n===0?'E':n>0?'+'+n:n;
 const parTotal=n=>s.pars.slice(0,n).reduce((a,b)=>a+b,0);
 const total=(p,n=s.holes)=>Array.from({length:n},(_,i)=>s.scores[p]?.[i+1]||0).reduce((a,b)=>a+b,0);
 const courseById=id=>courses.find(c=>c.id===id);
 
-function render(){save();stopLocation();if(map){if(draft){const center=map.getCenter();draft.mapView={lat:center.lat,lng:center.lng,zoom:map.getZoom()}}map.remove();map=null}app.className='';({home,setup,pars,round,recap,coursesView,mapCourse,accountView,historyView,historyDetailView}[s.v]||home)();if(s.v!=='home')bottomNav()}
+function render(){save();stopLocation();if(map){if(draft){const center=map.getCenter();draft.mapView={lat:center.lat,lng:center.lng,zoom:map.getZoom()}}map.remove();map=null}app.className='';({home,setup,pars,round,recap,coursesView,mapCourse,accountView,historyView,historyDetailView,clubsView}[s.v]||home)();if(s.v!=='home')bottomNav()}
 function home(){const canResume=['setup','pars','round','recap'].includes(s.resumeView)&&!s.done;app.className='home-page';app.innerHTML=`<section class="home-hero"><div class="home-kicker">FAITH · FELLOWSHIP · FAIRWAYS</div><div class="logo-wrap"><img src="agape-golf-logo.png" alt="Agape Tumoutou Golfers logo" class="landing-logo"></div><div class="home-brand">Agape Tumoutou Golfers</div><h1>Saved to <span>Serve</span></h1><p class="scripture"><strong>Who hath saved us, and called us with an holy calling</strong><br><span>... 2 Tim. 1:9</span></p><div class="feature-pills"><span>⛳ Shared Courses</span><span>◎ Live GPS</span><span>＋ Protected Scoring</span></div></section><section class="home-actions">${cloudLoading?'<div class="notice">Loading shared courses…</div>':''}${cloudError?`<div class="error-notice">${esc(cloudError)}</div>`:''}${canResume?'<button class="primary home-primary" onclick="resumeRound()">Resume Round <b>→</b></button><button class="secondary home-secondary" onclick="start()">Start a New Round</button>':`<button class="primary home-primary" onclick="start()" ${cloudLoading?'disabled':''}>Create a Round <b>→</b></button>`}<button class="secondary home-secondary" onclick="joinRound()">Join with Round Code</button>${currentUser?'<button class="secondary home-secondary" onclick="openHistory()">Previous Matches</button>':''}<button class="secondary home-secondary" onclick="openCourses()">${adminRole?'Map & Manage Courses':'Explore Shared Courses'}</button>${adminRole==='super_admin'?'<button class="admin-tool" onclick="promoteCourseAdmin()">＋ Add Course Admin</button>':''}<div class="account-bar">${currentUser?`<span class="account-status"><i></i>${adminRole?esc(adminRole.replace('_',' ')):'Golfer signed in'}</span><button class="back" onclick="accountAction()">Account</button>`:`<span class="small home-muted">Golfers and course managers</span><button class="back" onclick="signInAccount()">Sign in</button>`}</div></section><footer class="home-footer">Saved to serve · Ready to play</footer>`}
 function bottomNav(){app.insertAdjacentHTML('beforeend',`<nav class="bottom-nav" aria-label="Main navigation"><button onclick="goHome()"><span>⌂</span>Home</button><button onclick="openCoursesFromNav()"><span>⛳</span>Courses</button><button onclick="accountAction()"><span>${currentUser?'●':'♙'}</span>${currentUser?'Account':'Login'}</button></nav>`)}
 function rememberRoundView(){if(['setup','pars','round','recap'].includes(s.v)&&!s.done)s.resumeView=s.v}
@@ -33,14 +35,13 @@ function goHome(){rememberRoundView();s.v='home';render()}
 async function resumeRound(){if(s.sharedRoundId)await loadSharedRound(false);s.v=s.resumeView||'round';render()}
 function openCoursesFromNav(){rememberRoundView();s.v='coursesView';render()}
 async function accountAction(){if(!currentUser){await signInAccount();return}rememberRoundView();s.v='accountView';render()}
-function accountView(){if(!currentUser){s.v='home';render();return}app.innerHTML=`<button class="back" onclick="goHome()">← Back</button><h1>My Account</h1><section class="profile-card"><div class="profile-icon">♙</div><div><b>${esc(currentUser.email||'Golfer')}</b><div class="small muted">${adminRole?esc(adminRole.replace('_',' ')):'Golfer account'}</div></div></section><div class="notice remember-notice">✓ You will stay signed in securely on this device until you choose Sign Out.</div><button class="primary" onclick="openHistory()">View Previous Matches</button>${adminRole==='super_admin'?'<button class="secondary" onclick="promoteCourseAdmin()">Add Course Admin</button>':''}<button class="secondary danger-button" onclick="signOutAdmin()">Sign Out</button>`}
+function accountView(){if(!currentUser){s.v='home';render();return}app.innerHTML=`<button class="back" onclick="goHome()">← Back</button><h1>My Account</h1><section class="profile-card"><div class="profile-icon">♙</div><div><b>${esc(currentUser.email||'Golfer')}</b><div class="small muted">${adminRole?esc(adminRole.replace('_',' ')):'Golfer account'}</div></div></section><div class="notice remember-notice">✓ You will stay signed in securely on this device until you choose Sign Out.</div><button class="primary" onclick="openClubs()">My Clubs & Distances</button><button class="secondary" onclick="openHistory()">View Previous Matches</button>${adminRole==='super_admin'?'<button class="secondary" onclick="promoteCourseAdmin()">Add Course Admin</button>':''}<button class="secondary danger-button" onclick="signOutAdmin()">Sign Out</button>`}
 async function initializeCloud(){
   cloudLoading=true;render();
   const {data:{session}}=await db.auth.getSession();
   currentUser=session?.user||null;
   if(s.ownerUserId&&s.ownerUserId!==currentUser?.id)s={...roundDefault};
-  await loadAdminRole();
-  await loadCourses();
+  await Promise.all([loadAdminRole(),loadCourses(),loadClubDistances()]);
   cloudLoading=false;render();
 }
 async function loadAdminRole(){
@@ -54,12 +55,54 @@ async function loadCourses(){
   if(error){cloudError='Shared courses could not be loaded. Check your internet connection and try again.';courses=[];return}
   cloudError='';courses=data||[];
 }
+async function loadClubDistances(){
+  clubDistances={};clubProfileError='';
+  if(!currentUser)return;
+  const {data,error}=await db.from('golfer_club_distances').select('club,carry_yards').eq('user_id',currentUser.id);
+  if(error){clubProfileError='Club recommendations are not ready yet. Install the Supabase club-distance update first.';return}
+  for(const item of data||[])clubDistances[item.club]=item.carry_yards;
+}
+function openClubs(){if(!currentUser){alert('Please sign in first.');return}s.v='clubsView';render()}
+function clubsView(){
+  if(!currentUser){s.v='home';render();return}
+  app.innerHTML=`<button class="back" onclick="accountAction()">← Account</button><h1>My Clubs</h1><p class="muted">Enter the distance you normally carry each club in the air. Leave clubs you do not carry blank.</p>${clubProfileError?`<div class="error-notice">${esc(clubProfileError)}</div>`:''}<section class="club-grid">${CLUBS.map(club=>`<label class="club-row"><span>${esc(club)}</span><span class="club-input"><input data-club="${esc(club)}" type="number" inputmode="numeric" min="20" max="350" step="1" value="${clubDistances[club]||''}" placeholder="—"><small>yd</small></span></label>`).join('')}</section><div class="notice">Recommendations use the distance to the center of the green. Wind, elevation, lie, hazards and rollout can change the right club.</div><button id="saveClubsButton" class="primary" onclick="saveClubDistances()" ${clubProfileError?'disabled':''}>Save My Clubs</button>`;
+}
+async function saveClubDistances(){
+  const distances={};
+  for(const input of document.querySelectorAll('[data-club]')){
+    if(input.value==='')continue;
+    const yards=Number(input.value);
+    if(!Number.isInteger(yards)||yards<20||yards>350){alert(`Enter a carry distance from 20 to 350 yards for ${input.dataset.club}.`);input.focus();return}
+    distances[input.dataset.club]=yards;
+  }
+  if(!Object.keys(distances).length&&!confirm('Save an empty bag? Club suggestions will remain turned off.'))return;
+  const button=$('saveClubsButton');button.disabled=true;button.textContent='Saving…';
+  const {error}=await db.rpc('save_my_club_distances',{p_distances:distances});
+  if(error){button.disabled=false;button.textContent='Save My Clubs';alert('Club distances could not be saved: '+error.message);return}
+  clubDistances=distances;clubProfileError='';alert('Your club distances are saved. Live club suggestions are now ready.');accountAction();
+}
+function suggestedClubFor(yards){
+  if(!Number.isFinite(yards))return null;
+  const bag=Object.entries(clubDistances).map(([club,carry])=>({club,carry:Number(carry)})).filter(x=>Number.isFinite(x.carry)).sort((a,b)=>a.carry-b.carry);
+  if(!bag.length)return null;
+  const shortest=bag[0],longest=bag[bag.length-1];
+  if(yards>longest.carry+35)return{club:longest.club,note:`Your longest saved carry is ${longest.carry} yd. Choose a safe lay-up target.`};
+  if(yards<shortest.carry-15)return{club:shortest.club,note:`Your shortest saved carry is ${shortest.carry} yd. Consider a partial swing.`};
+  const closest=bag.reduce((best,item)=>Math.abs(item.carry-yards)<Math.abs(best.carry-yards)?item:best,bag[0]);
+  return{club:closest.club,note:`Saved carry ${closest.carry} yd · center is ${yards} yd`};
+}
+function updateClubSuggestion(centerYards){
+  const title=$('clubSuggestion'),note=$('clubSuggestionNote');if(!title||!note)return;
+  const suggestion=suggestedClubFor(centerYards);
+  if(!suggestion){title.textContent='Set up My Clubs';note.textContent='Add your carry distances under Account to receive suggestions.';return}
+  title.textContent=suggestion.club;note.textContent=suggestion.note;
+}
 async function signInAdmin(){
   const email=prompt('Administrator email:');if(!email)return;
   const password=prompt('Administrator password:');if(!password)return;
   const {data,error}=await db.auth.signInWithPassword({email:email.trim(),password});
   if(error){alert('Sign-in failed: '+error.message);return}
-  currentUser=data.user;await loadAdminRole();
+  currentUser=data.user;await Promise.all([loadAdminRole(),loadClubDistances()]);
   if(!adminRole){await db.auth.signOut();currentUser=null;alert('This account is not an authorized course administrator.');return}
   render();
 }
@@ -70,14 +113,14 @@ async function signInAccount(){
   if(creating){
     const {data,error}=await db.auth.signInWithPassword({email:email.trim(),password});
     if(error){alert('Sign-in failed: '+error.message);return false}
-    currentUser=data.user;await loadAdminRole();render();return true;
+    currentUser=data.user;await Promise.all([loadAdminRole(),loadClubDistances()]);render();return true;
   }
   const {data,error}=await db.auth.signUp({email:email.trim(),password});
   if(error){alert('Account could not be created: '+error.message);return false}
   if(!data.session){alert('Account created. Check your email and confirm it, then return and sign in.');return false}
-  currentUser=data.user;await loadAdminRole();render();return true;
+  currentUser=data.user;await Promise.all([loadAdminRole(),loadClubDistances()]);render();return true;
 }
-async function signOutAdmin(){await db.auth.signOut();currentUser=null;adminRole=null;historyRounds=[];historyDetail=null;s={...roundDefault};render()}
+async function signOutAdmin(){await db.auth.signOut();currentUser=null;adminRole=null;historyRounds=[];historyDetail=null;clubDistances={};clubProfileError='';s={...roundDefault};render()}
 async function promoteCourseAdmin(){
   if(adminRole!=='super_admin'){alert('Only a super admin can add course administrators.');return}
   const email=prompt('Enter the email of an existing app user:');
@@ -182,8 +225,8 @@ function historyDetailView(){
 }
 function scoreValue(p){return s.scores[p]?.[s.hole]||0}
 function round(){const h=s.hole,p=s.pars[h-1],pt=parTotal(h),c=courseById(s.courseId),green=c?.greens?.[h-1];app.innerHTML=`<div class="row"><div><div class="brand small-brand">Agape Tumoutou Golfers</div><span class="small muted">${esc(s.course)}</span></div><button class="back" onclick="openScorecard()">Scorecard</button></div>${s.joinCode?`<div class="round-code">Round code <b>${esc(s.joinCode)}</b><button onclick="copyRoundCode()">Copy</button></div>`:''}<section class="hole"><div class="eyebrow">Hole ${h} of ${s.holes} · Par ${p}</div><h1>Enter your score</h1></section>${green?yardagePanel():`<div class="notice">No GPS markers for this hole. Add them from Map & Manage Courses.</div>`}${s.players.map(x=>{const mine=isMyPlayer(x);return`<div class="card score ${mine?'my-score':''}"><div><b>${esc(x)}${mine?' (You)':''}</b><div class="small muted">Total ${total(x,h)} · ${rel(total(x,h)-pt)}</div></div>${mine?`<div class="stepper"><button onclick="changeScore('${encodeURIComponent(x)}',-1)">−</button><span>${scoreValue(x)||'–'}</span><button onclick="changeScore('${encodeURIComponent(x)}',1)">+</button></div>`:`<span class="locked-score">${scoreValue(x)||'–'} 🔒</span>`}<span class="green">${scoreValue(x)?rel(scoreValue(x)-p):''}</span></div>`}).join('')}<div class="row"><button class="secondary half" onclick="prev()">Previous</button><button class="primary fit" onclick="next()">${h===s.holes?'Finish':'Next Hole →'}</button></div>`;if(green)startLocation(green)}
-function yardagePanel(){return`<section class="gps-card"><div class="row"><div><b>Live GPS Yardage</b><div id="gpsStatus" class="small muted">Requesting your location…</div></div><button class="locate" onclick="refreshLocation()">Refresh</button></div><div class="yardages"><div><span id="frontYards">–</span><small>Front</small></div><div class="center-yard"><span id="centerYards">–</span><small>Center</small></div><div><span id="backYards">–</span><small>Back</small></div></div></section>`}
-function startLocation(green){if(!navigator.geolocation){$('gpsStatus').textContent='GPS is not supported by this browser.';return}locationWatch=navigator.geolocation.watchPosition(pos=>{$('gpsStatus').textContent=`Accuracy ±${Math.round(pos.coords.accuracy*1.094)} yd`;const here={lat:pos.coords.latitude,lng:pos.coords.longitude};['front','center','back'].forEach(k=>{const el=$(k+'Yards');if(el)el.textContent=green[k]?Math.round(distanceYards(here,green[k])):'–'})},err=>{if($('gpsStatus'))$('gpsStatus').textContent=err.code===1?'Location permission was denied. Allow it in browser settings.':'Unable to get a GPS signal.'},{enableHighAccuracy:true,maximumAge:3000,timeout:15000})}
+function yardagePanel(){return`<section class="gps-card"><div class="row"><div><b>Live GPS Yardage</b><div id="gpsStatus" class="small muted">Requesting your location…</div></div><button class="locate" onclick="refreshLocation()">Refresh</button></div><div class="yardages"><div><span id="frontYards">–</span><small>Front</small></div><div class="center-yard"><span id="centerYards">–</span><small>Center</small></div><div><span id="backYards">–</span><small>Back</small></div></div><div class="club-suggestion"><div class="club-symbol">⛳</div><div><small>Suggested club</small><b id="clubSuggestion">Waiting for GPS…</b><span id="clubSuggestionNote">Based on your personal carry distances</span></div></div></section>`}
+function startLocation(green){if(!navigator.geolocation){$('gpsStatus').textContent='GPS is not supported by this browser.';return}locationWatch=navigator.geolocation.watchPosition(pos=>{$('gpsStatus').textContent=`Accuracy ±${Math.round(pos.coords.accuracy*1.094)} yd`;const here={lat:pos.coords.latitude,lng:pos.coords.longitude},yards={};['front','center','back'].forEach(k=>{const el=$(k+'Yards');yards[k]=green[k]?Math.round(distanceYards(here,green[k])):null;if(el)el.textContent=yards[k]??'–'});updateClubSuggestion(yards.center)},err=>{if($('gpsStatus'))$('gpsStatus').textContent=err.code===1?'Location permission was denied. Allow it in browser settings.':'Unable to get a GPS signal.'},{enableHighAccuracy:true,maximumAge:3000,timeout:15000})}
 function stopLocation(){if(locationWatch!==null){navigator.geolocation.clearWatch(locationWatch);locationWatch=null}}
 function refreshLocation(){const g=courseById(s.courseId)?.greens?.[s.hole-1];stopLocation();if(g)startLocation(g)}
 function distanceYards(a,b){const R=6371000,rad=x=>x*Math.PI/180,dLat=rad(b.lat-a.lat),dLng=rad(b.lng-a.lng),q=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLng/2)**2;return R*2*Math.atan2(Math.sqrt(q),Math.sqrt(1-q))*1.0936133}

@@ -22,6 +22,8 @@ A mobile-first group golf scorecard with custom course mapping and live GPS yard
 - Resume an unfinished round after visiting the Home screen
 - Mobile-friendly GitHub Pages deployment
 - Custom Agape Golf home-screen icon for iPhone and Android
+- Private My Clubs carry-distance profile for every golfer
+- Live personalized club suggestions based on center-green GPS distance
 
 ## Deploy
 
@@ -36,3 +38,5 @@ Run `supabase-admin-promotion.sql` once in the Supabase SQL Editor to enable the
 Run `supabase-shared-rounds.sql` once in the Supabase SQL Editor to enable golfer accounts, round codes and score ownership. Each golfer must create or sign in to their own account before creating or joining a round.
 
 No additional SQL is required for match history. It reads each golfer's existing protected round membership and scores from the shared-round tables.
+
+Run `supabase-club-suggestions.sql` once in the Supabase SQL Editor to enable private carry-distance profiles and personalized live club recommendations.
