@@ -4,8 +4,9 @@ const esc = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;',
 const SUPABASE_URL = 'https://rntmqjqbmjfcpwbbflyz.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_r6fBc5CmRwlyLhTnk7u6BA_rRA1Pmoj';
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-const roundDefault = {v:'home',course:'',courseId:null,holes:18,players:['You'],pars:[],scores:{},hole:1,done:false};
+const roundDefault = {v:'home',course:'',courseId:null,holes:18,players:[''],pars:[],scores:{},hole:1,done:false,resumeView:null};
 let s = JSON.parse(localStorage.atgRound || 'null') || roundDefault;
+if(s.players?.length===1&&s.players[0]==='You'&&['home','setup'].includes(s.v))s.players=[''];
 let courses = [];
 let currentUser = null;
 let adminRole = null;
@@ -14,14 +15,21 @@ let cloudLoading = true;
 let draft=null,map=null,locationWatch=null;
 let courseSearchResults=[];
 let lastCourseSearch=0;
+let sharedPlayers=[];
 const save=()=>{localStorage.atgRound=JSON.stringify(s)};
 const rel=n=>n===0?'E':n>0?'+'+n:n;
 const parTotal=n=>s.pars.slice(0,n).reduce((a,b)=>a+b,0);
 const total=(p,n=s.holes)=>Array.from({length:n},(_,i)=>s.scores[p]?.[i+1]||0).reduce((a,b)=>a+b,0);
 const courseById=id=>courses.find(c=>c.id===id);
 
-function render(){save();stopLocation();if(map){if(draft){const center=map.getCenter();draft.mapView={lat:center.lat,lng:center.lng,zoom:map.getZoom()}}map.remove();map=null}app.className='';({home,setup,pars,round,recap,coursesView,mapCourse}[s.v]||home)()}
-function home(){app.className='home-page';app.innerHTML=`<section class="home-hero"><div class="home-kicker">FAITH · FELLOWSHIP · FAIRWAYS</div><div class="logo-wrap"><img src="agape-golf-logo.png" alt="Agape Tumoutou Golfers logo" class="landing-logo"></div><div class="home-brand">Agape Tumoutou Golfers</div><h1>Saved to <span>Serve</span></h1><p class="scripture"><strong>Who hath saved us, and called us with an holy calling</strong><br><span>... 2 Tim. 1:9</span></p><div class="feature-pills"><span>⛳ Shared Courses</span><span>◎ Live GPS</span><span>＋ Group Scoring</span></div></section><section class="home-actions">${cloudLoading?'<div class="notice">Loading shared courses…</div>':''}${cloudError?`<div class="error-notice">${esc(cloudError)}</div>`:''}<button class="primary home-primary" onclick="start()" ${cloudLoading?'disabled':''}>Start a Round <b>→</b></button><button class="secondary home-secondary" onclick="openCourses()">${adminRole?'Map & Manage Courses':'Explore Shared Courses'}</button>${adminRole==='super_admin'?'<button class="admin-tool" onclick="promoteCourseAdmin()">＋ Add Course Admin</button>':''}<div class="account-bar">${currentUser?`<span class="account-status"><i></i>${adminRole?esc(adminRole.replace('_',' ')):'Signed in'}</span><button class="back" onclick="signOutAdmin()">Sign out</button>`:`<span class="small home-muted">Course managers</span><button class="back" onclick="signInAdmin()">Admin sign in</button>`}</div></section><footer class="home-footer">Saved to serve · Ready to play</footer>`}
+function render(){save();stopLocation();if(map){if(draft){const center=map.getCenter();draft.mapView={lat:center.lat,lng:center.lng,zoom:map.getZoom()}}map.remove();map=null}app.className='';({home,setup,pars,round,recap,coursesView,mapCourse}[s.v]||home)();if(s.v!=='home')bottomNav()}
+function home(){const canResume=['setup','pars','round','recap'].includes(s.resumeView)&&!s.done;app.className='home-page';app.innerHTML=`<section class="home-hero"><div class="home-kicker">FAITH · FELLOWSHIP · FAIRWAYS</div><div class="logo-wrap"><img src="agape-golf-logo.png" alt="Agape Tumoutou Golfers logo" class="landing-logo"></div><div class="home-brand">Agape Tumoutou Golfers</div><h1>Saved to <span>Serve</span></h1><p class="scripture"><strong>Who hath saved us, and called us with an holy calling</strong><br><span>... 2 Tim. 1:9</span></p><div class="feature-pills"><span>⛳ Shared Courses</span><span>◎ Live GPS</span><span>＋ Protected Scoring</span></div></section><section class="home-actions">${cloudLoading?'<div class="notice">Loading shared courses…</div>':''}${cloudError?`<div class="error-notice">${esc(cloudError)}</div>`:''}${canResume?'<button class="primary home-primary" onclick="resumeRound()">Resume Round <b>→</b></button><button class="secondary home-secondary" onclick="start()">Start a New Round</button>':`<button class="primary home-primary" onclick="start()" ${cloudLoading?'disabled':''}>Create a Round <b>→</b></button>`}<button class="secondary home-secondary" onclick="joinRound()">Join with Round Code</button><button class="secondary home-secondary" onclick="openCourses()">${adminRole?'Map & Manage Courses':'Explore Shared Courses'}</button>${adminRole==='super_admin'?'<button class="admin-tool" onclick="promoteCourseAdmin()">＋ Add Course Admin</button>':''}<div class="account-bar">${currentUser?`<span class="account-status"><i></i>${adminRole?esc(adminRole.replace('_',' ')):'Golfer signed in'}</span><button class="back" onclick="signOutAdmin()">Sign out</button>`:`<span class="small home-muted">Golfers and course managers</span><button class="back" onclick="signInAccount()">Sign in</button>`}</div></section><footer class="home-footer">Saved to serve · Ready to play</footer>`}
+function bottomNav(){app.insertAdjacentHTML('beforeend',`<nav class="bottom-nav" aria-label="Main navigation"><button onclick="goHome()"><span>⌂</span>Home</button><button onclick="openCoursesFromNav()"><span>⛳</span>Courses</button><button onclick="accountAction()"><span>${currentUser?'●':'♙'}</span>${currentUser?'Account':'Login'}</button></nav>`)}
+function rememberRoundView(){if(['setup','pars','round','recap'].includes(s.v)&&!s.done)s.resumeView=s.v}
+function goHome(){rememberRoundView();s.v='home';render()}
+async function resumeRound(){if(s.sharedRoundId)await loadSharedRound(false);s.v=s.resumeView||'round';render()}
+function openCoursesFromNav(){rememberRoundView();s.v='coursesView';render()}
+async function accountAction(){if(!currentUser){await signInAccount();return}if(confirm(`Signed in as ${adminRole?adminRole.replace('_',' '):'golfer'}.\n\nWould you like to sign out?`))await signOutAdmin()}
 async function initializeCloud(){
   cloudLoading=true;render();
   const {data:{session}}=await db.auth.getSession();
@@ -50,6 +58,20 @@ async function signInAdmin(){
   if(!adminRole){await db.auth.signOut();currentUser=null;alert('This account is not an authorized course administrator.');return}
   render();
 }
+async function signInAccount(){
+  const creating=confirm('Choose OK to sign in.\nChoose Cancel to create a new golfer account.');
+  const email=prompt('Email address:');if(!email)return false;
+  const password=prompt(creating?'Password:':'Create a password with at least 6 characters:');if(!password)return false;
+  if(creating){
+    const {data,error}=await db.auth.signInWithPassword({email:email.trim(),password});
+    if(error){alert('Sign-in failed: '+error.message);return false}
+    currentUser=data.user;await loadAdminRole();render();return true;
+  }
+  const {data,error}=await db.auth.signUp({email:email.trim(),password});
+  if(error){alert('Account could not be created: '+error.message);return false}
+  if(!data.session){alert('Account created. Check your email and confirm it, then return and sign in.');return false}
+  currentUser=data.user;await loadAdminRole();render();return true;
+}
 async function signOutAdmin(){await db.auth.signOut();currentUser=null;adminRole=null;s.v='home';render()}
 async function promoteCourseAdmin(){
   if(adminRole!=='super_admin'){alert('Only a super admin can add course administrators.');return}
@@ -60,26 +82,63 @@ async function promoteCourseAdmin(){
   if(error){alert('Administrator was not added: '+error.message);return}
   alert(`${data.email} is now a course administrator.`);
 }
-function start(){s={...roundDefault,v:'setup',players:['You'],scores:{},pars:[]};render()}
-function setup(){const options=courses.map(c=>`<option value="${esc(c.id)}" ${s.courseId===c.id?'selected':''}>${esc(c.name)} (${c.holes} holes)</option>`).join('');app.innerHTML=`<button class="back" onclick="s.v='home';render()">← Back</button><h1>Start a Round</h1><label>Saved course</label><select id="savedCourse" onchange="chooseCourse(this.value)"><option value="">Custom scorecard without GPS</option>${options}</select>${s.courseId?`<div class="notice">GPS green markers are available for this course.</div>`:`<label>Course name</label><input id="course" value="${esc(s.course)}" placeholder="e.g., Oak Valley Golf Club"><label>How many holes?</label><div class="row"><button class="choice ${s.holes===9?'on':''}" onclick="setHoles(9)">9 Holes</button><button class="choice ${s.holes===18?'on':''}" onclick="setHoles(18)">18 Holes</button></div>`}<label>Players</label>${s.players.map((p,i)=>`<div class="card row"><b>${esc(p)}</b>${s.players.length>1?`<button class="back" onclick="removePlayer(${i})">Remove</button>`:''}</div>`).join('')}<input id="name" placeholder="Add player name"><button class="secondary" onclick="addPlayer()">Add player +</button><button class="primary" onclick="goPars()">Continue</button>`}
+async function start(){if(!currentUser){alert('Each golfer needs an account so scores can be protected. Please sign in or create an account first.');await signInAccount();if(!currentUser)return}if(s.resumeView&&!s.done&&!confirm('Start a new round? Your unfinished round will be replaced.'))return;s={...roundDefault,v:'setup',players:[''],scores:{},pars:[],resumeView:'setup',sharedRoundId:null,joinCode:null};render()}
+function setup(){const options=courses.map(c=>`<option value="${esc(c.id)}" ${s.courseId===c.id?'selected':''}>${esc(c.name)} (${c.holes} holes)</option>`).join('');app.innerHTML=`<button class="back" onclick="goHome()">← Back</button><h1>Create a Round</h1><p class="muted">You will receive a code for the other golfers after setting the pars.</p><label>Saved course</label><select id="savedCourse" onchange="chooseCourse(this.value)"><option value="">Custom scorecard without GPS</option>${options}</select>${s.courseId?`<div class="notice">GPS green markers are available for this course.</div>`:`<label>Course name</label><input id="course" value="${esc(s.course)}" placeholder="e.g., Oak Valley Golf Club"><label>How many holes?</label><div class="row"><button class="choice ${s.holes===9?'on':''}" onclick="setHoles(9)">9 Holes</button><button class="choice ${s.holes===18?'on':''}" onclick="setHoles(18)">18 Holes</button></div>`}<label>Your player name</label><input aria-label="Your player name" value="${esc(s.players[0]||'')}" placeholder="Enter your name" oninput="updatePlayer(0,this.value)"><div class="notice">Each additional golfer will join on their own phone and enter their own name.</div><button class="primary" onclick="goPars()">Continue</button>`}
 function chooseCourse(id){const c=courseById(id);if(c){s.courseId=c.id;s.course=c.name;s.holes=c.holes;s.pars=[...c.pars]}else{s.courseId=null;s.course='';s.pars=[]}render()}
 function setHoles(n){s.holes=n;render()}
 function addPlayer(){const n=$('name').value.trim();if(n&&!s.players.includes(n)){s.players.push(n);render()}}
+function updatePlayer(i,name){s.players[i]=name;save()}
 function removePlayer(i){s.players.splice(i,1);render()}
-function goPars(){if(!s.courseId)s.course=$('course').value.trim()||'Friendly Round';s.pars=Array.from({length:s.holes},(_,i)=>s.pars[i]||4);s.v='pars';render()}
-function pars(){app.innerHTML=`<button class="back" onclick="s.v='setup';render()">← Back</button><h1>Set hole pars</h1><p class="muted">Adjust any hole that is not par 4.</p>${s.pars.map((x,i)=>`<div class="card row"><b>Hole ${i+1}</b><div class="stepper"><button onclick="changePar(${i},-1)">−</button><span>${x}</span><button onclick="changePar(${i},1)">+</button></div></div>`).join('')}<button class="primary" onclick="s.v='round';render()">Start Round</button>`}
+function goPars(){const names=s.players.map(x=>x.trim()).filter(Boolean);if(!names.length){alert('Enter at least one player name.');return}if(new Set(names.map(x=>x.toLowerCase())).size!==names.length){alert('Each player needs a different name.');return}s.players=names;if(!s.courseId)s.course=$('course').value.trim()||'Friendly Round';s.pars=Array.from({length:s.holes},(_,i)=>s.pars[i]||4);s.v='pars';s.resumeView='pars';render()}
+function pars(){app.innerHTML=`<button class="back" onclick="s.v='setup';render()">← Back</button><h1>Set hole pars</h1><p class="muted">Adjust any hole that is not par 4.</p>${s.pars.map((x,i)=>`<div class="card row"><b>Hole ${i+1}</b><div class="stepper"><button onclick="changePar(${i},-1)">−</button><span>${x}</span><button onclick="changePar(${i},1)">+</button></div></div>`).join('')}<button id="createRoundButton" class="primary" onclick="createSharedRound()">Create Protected Round</button>`}
 function changePar(i,d){s.pars[i]=Math.max(3,Math.min(6,s.pars[i]+d));render()}
+async function createSharedRound(){
+  if(!currentUser){alert('Please sign in first.');return}
+  const button=$('createRoundButton');if(button){button.disabled=true;button.textContent='Creating round…'}
+  const {data,error}=await db.rpc('create_shared_round',{p_course_id:s.courseId||null,p_course_name:s.course,p_holes:s.holes,p_pars:s.pars,p_display_name:s.players[0]});
+  if(error){alert('Round could not be created: '+error.message);if(button){button.disabled=false;button.textContent='Create Protected Round'}return}
+  s.sharedRoundId=data.round_id;s.joinCode=data.join_code;s.hole=1;s.done=false;s.resumeView='round';
+  await loadSharedRound(false);s.v='round';render();
+  alert(`Round created. Share code ${s.joinCode} with the other golfers.`);
+}
+async function joinRound(){
+  if(!currentUser){alert('Please sign in or create a golfer account first.');const signedIn=await signInAccount();if(!signedIn)return}
+  const code=prompt('Enter the 6-character round code:');if(!code)return;
+  const name=prompt('Enter your player name:');if(!name?.trim())return;
+  const {data,error}=await db.rpc('join_shared_round',{p_join_code:code.trim(),p_display_name:name.trim()});
+  if(error){alert('Could not join round: '+error.message);return}
+  s={...roundDefault,v:'round',players:[name.trim()],scores:{},sharedRoundId:data.round_id,joinCode:data.join_code,resumeView:'round'};
+  await loadSharedRound(false);render();
+}
+async function loadSharedRound(showError=true){
+  if(!s.sharedRoundId||!currentUser)return false;
+  const [roundResult,playersResult,scoresResult]=await Promise.all([
+    db.from('shared_rounds').select('id,join_code,course_id,course_name,holes,pars,status').eq('id',s.sharedRoundId).single(),
+    db.from('round_players').select('user_id,display_name,joined_at').eq('round_id',s.sharedRoundId).order('joined_at'),
+    db.from('round_scores').select('user_id,hole,strokes').eq('round_id',s.sharedRoundId)
+  ]);
+  if(roundResult.error||playersResult.error||scoresResult.error){if(showError)alert('Shared scores could not be refreshed. Check your connection.');return false}
+  const r=roundResult.data;s.joinCode=r.join_code;s.courseId=r.course_id;s.course=r.course_name;s.holes=r.holes;s.pars=r.pars;s.done=r.status==='complete';
+  sharedPlayers=playersResult.data||[];s.players=sharedPlayers.map(p=>p.display_name);s.scores={};
+  for(const score of scoresResult.data||[]){const player=sharedPlayers.find(p=>p.user_id===score.user_id);if(player){s.scores[player.display_name]??={};s.scores[player.display_name][score.hole]=score.strokes}}
+  return true;
+}
+async function refreshSharedRound(){if(await loadSharedRound())render()}
 function scoreValue(p){return s.scores[p]?.[s.hole]||0}
-function round(){const h=s.hole,p=s.pars[h-1],pt=parTotal(h),c=courseById(s.courseId),green=c?.greens?.[h-1];app.innerHTML=`<div class="row"><div><div class="brand small-brand">Agape Tumoutou Golfers</div><span class="small muted">${esc(s.course)}</span></div><button class="back" onclick="s.v='recap';render()">Scorecard</button></div><section class="hole"><div class="eyebrow">Hole ${h} of ${s.holes} · Par ${p}</div><h1>Enter scores</h1></section>${green?yardagePanel():`<div class="notice">No GPS markers for this hole. Add them from Map & Manage Courses.</div>`}${s.players.map(x=>`<div class="card score"><div><b>${esc(x)}</b><div class="small muted">Total ${total(x,h)} · ${rel(total(x,h)-pt)}</div></div><div class="stepper"><button onclick="changeScore('${encodeURIComponent(x)}',-1)">−</button><span>${scoreValue(x)||'–'}</span><button onclick="changeScore('${encodeURIComponent(x)}',1)">+</button></div><span class="green">${scoreValue(x)?rel(scoreValue(x)-p):''}</span></div>`).join('')}<div class="row"><button class="secondary half" onclick="prev()">Previous</button><button class="primary fit" onclick="next()">${h===s.holes?'Finish':'Next Hole →'}</button></div>`;if(green)startLocation(green)}
+function round(){const h=s.hole,p=s.pars[h-1],pt=parTotal(h),c=courseById(s.courseId),green=c?.greens?.[h-1];app.innerHTML=`<div class="row"><div><div class="brand small-brand">Agape Tumoutou Golfers</div><span class="small muted">${esc(s.course)}</span></div><button class="back" onclick="openScorecard()">Scorecard</button></div>${s.joinCode?`<div class="round-code">Round code <b>${esc(s.joinCode)}</b><button onclick="copyRoundCode()">Copy</button></div>`:''}<section class="hole"><div class="eyebrow">Hole ${h} of ${s.holes} · Par ${p}</div><h1>Enter your score</h1></section>${green?yardagePanel():`<div class="notice">No GPS markers for this hole. Add them from Map & Manage Courses.</div>`}${s.players.map(x=>{const mine=isMyPlayer(x);return`<div class="card score ${mine?'my-score':''}"><div><b>${esc(x)}${mine?' (You)':''}</b><div class="small muted">Total ${total(x,h)} · ${rel(total(x,h)-pt)}</div></div>${mine?`<div class="stepper"><button onclick="changeScore('${encodeURIComponent(x)}',-1)">−</button><span>${scoreValue(x)||'–'}</span><button onclick="changeScore('${encodeURIComponent(x)}',1)">+</button></div>`:`<span class="locked-score">${scoreValue(x)||'–'} 🔒</span>`}<span class="green">${scoreValue(x)?rel(scoreValue(x)-p):''}</span></div>`}).join('')}<div class="row"><button class="secondary half" onclick="prev()">Previous</button><button class="primary fit" onclick="next()">${h===s.holes?'Finish':'Next Hole →'}</button></div>`;if(green)startLocation(green)}
 function yardagePanel(){return`<section class="gps-card"><div class="row"><div><b>Live GPS Yardage</b><div id="gpsStatus" class="small muted">Requesting your location…</div></div><button class="locate" onclick="refreshLocation()">Refresh</button></div><div class="yardages"><div><span id="frontYards">–</span><small>Front</small></div><div class="center-yard"><span id="centerYards">–</span><small>Center</small></div><div><span id="backYards">–</span><small>Back</small></div></div></section>`}
 function startLocation(green){if(!navigator.geolocation){$('gpsStatus').textContent='GPS is not supported by this browser.';return}locationWatch=navigator.geolocation.watchPosition(pos=>{$('gpsStatus').textContent=`Accuracy ±${Math.round(pos.coords.accuracy*1.094)} yd`;const here={lat:pos.coords.latitude,lng:pos.coords.longitude};['front','center','back'].forEach(k=>{const el=$(k+'Yards');if(el)el.textContent=green[k]?Math.round(distanceYards(here,green[k])):'–'})},err=>{if($('gpsStatus'))$('gpsStatus').textContent=err.code===1?'Location permission was denied. Allow it in browser settings.':'Unable to get a GPS signal.'},{enableHighAccuracy:true,maximumAge:3000,timeout:15000})}
 function stopLocation(){if(locationWatch!==null){navigator.geolocation.clearWatch(locationWatch);locationWatch=null}}
 function refreshLocation(){const g=courseById(s.courseId)?.greens?.[s.hole-1];stopLocation();if(g)startLocation(g)}
 function distanceYards(a,b){const R=6371000,rad=x=>x*Math.PI/180,dLat=rad(b.lat-a.lat),dLng=rad(b.lng-a.lng),q=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLng/2)**2;return R*2*Math.atan2(Math.sqrt(q),Math.sqrt(1-q))*1.0936133}
-function changeScore(encoded,d){const p=decodeURIComponent(encoded);s.scores[p]??={};s.scores[p][s.hole]=Math.max(1,(s.scores[p][s.hole]||0)+d);render()}
+function isMyPlayer(name){return !s.sharedRoundId||sharedPlayers.some(p=>p.display_name===name&&p.user_id===currentUser?.id)}
+async function changeScore(encoded,d){const p=decodeURIComponent(encoded);if(s.sharedRoundId&&!isMyPlayer(p)){alert('Only '+p+' can edit this score.');return}s.scores[p]??={};const previous=s.scores[p][s.hole]||0;const nextScore=Math.max(1,previous+d);s.scores[p][s.hole]=nextScore;render();if(s.sharedRoundId){const {error}=await db.from('round_scores').upsert({round_id:s.sharedRoundId,user_id:currentUser.id,hole:s.hole,strokes:nextScore,updated_at:new Date().toISOString()});if(error){s.scores[p][s.hole]=previous;render();alert('Score was not saved: '+error.message)}}}
 function prev(){if(s.hole>1){s.hole--;render()}}
 function next(){if(s.hole<s.holes){s.hole++;render()}else{s.done=true;s.v='recap';render()}}
-function recap(){app.innerHTML=`<button class="back" onclick="s.v='round';render()">← Back to round</button><h1>${s.done?'Round Complete':'Live Scorecard'}</h1><p class="muted">${esc(s.course)} · ${s.holes} holes</p><div class="table-wrap"><table><thead><tr><th>Player</th>${s.pars.map((_,i)=>`<th>${i+1}</th>`).join('')}<th>Total</th><th>+/−</th></tr></thead><tbody>${s.players.map(x=>`<tr><td><b>${esc(x)}</b></td>${s.pars.map((_,i)=>`<td>${s.scores[x]?.[i+1]||'–'}</td>`).join('')}<td>${total(x)||'–'}</td><td class="green">${total(x)?rel(total(x)-parTotal(s.holes)):'–'}</td></tr>`).join('')}<tr><td><b>Par</b></td>${s.pars.map(x=>`<td>${x}</td>`).join('')}<td>${parTotal(s.holes)}</td><td>E</td></tr></tbody></table></div><button class="primary" onclick="s.v='home';render()">Done</button>`}
+async function openScorecard(){if(s.sharedRoundId)await loadSharedRound(false);s.v='recap';render()}
+function copyRoundCode(){navigator.clipboard?.writeText(s.joinCode).then(()=>alert('Round code copied.')).catch(()=>alert('Round code: '+s.joinCode))}
+function recap(){app.innerHTML=`<button class="back" onclick="s.v='round';render()">← Back to round</button><div class="row"><div><h1>${s.done?'Round Complete':'Live Scorecard'}</h1><p class="muted">${esc(s.course)} · ${s.holes} holes</p></div>${s.sharedRoundId?'<button class="locate" onclick="refreshSharedRound()">Refresh</button>':''}</div><div class="table-wrap"><table><thead><tr><th>Player</th>${s.pars.map((_,i)=>`<th>${i+1}</th>`).join('')}<th>Total</th><th>+/−</th></tr></thead><tbody>${s.players.map(x=>`<tr><td><b>${esc(x)}${isMyPlayer(x)?' (You)':''}</b></td>${s.pars.map((_,i)=>`<td>${s.scores[x]?.[i+1]||'–'}</td>`).join('')}<td>${total(x)||'–'}</td><td class="green">${total(x)?rel(total(x)-parTotal(s.holes)):'–'}</td></tr>`).join('')}<tr><td><b>Par</b></td>${s.pars.map(x=>`<td>${x}</td>`).join('')}<td>${parTotal(s.holes)}</td><td>E</td></tr></tbody></table></div><button class="primary" onclick="finishRound()">Done</button>`}
+function finishRound(){s.resumeView=null;s.v='home';render()}
 function openCourses(){s.v='coursesView';render()}
 function coursesView(){app.innerHTML=`<button class="back" onclick="s.v='home';render()">← Back</button><h1>Shared Courses</h1><p class="muted">Every golfer receives these course maps automatically. Only authorized administrators can change them.</p>${cloudError?`<div class="error-notice">${esc(cloudError)}</div>`:''}${courses.length?courses.map((c,i)=>`<div class="card"><div class="row"><div><b>${esc(c.name)}</b><div class="small muted">${c.holes} holes · ${mappedCount(c)} fully mapped</div></div>${adminRole?`<button class="back" onclick="editCourse(${i})">Edit</button>`:''}</div></div>`).join(''):'<div class="empty">No shared courses have been mapped yet.</div>'}${adminRole?'<button class="primary" onclick="newCourse()">Map a New Course</button>':currentUser?'<div class="notice">Your account does not have course-manager permission.</div>':'<button class="secondary" onclick="signInAdmin()">Admin sign in</button>'}`}
 function mappedCount(c){return c.greens.filter(g=>g.front&&g.center&&g.back).length}
