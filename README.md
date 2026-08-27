@@ -30,6 +30,7 @@ A mobile-first fellowship golf companion created by Rick Kulon, featuring shared
 - Private Super Admin player directory listing name, email and phone
 - Required first name, last name, email and phone during signup
 - Email verification instructions and editable golfer profiles
+- Uploadable profile-picture icons on Account, Profile and the private Players directory
 - Remembered golfer sessions and password recovery
 - Active-round recovery from Home and dedicated Round navigation
 - Offline score queue with synchronization after reconnecting
@@ -51,3 +52,5 @@ Upload the app files to the repository root and publish the `main` branch from `
 Before deploying the required golfer-profile signup, run `supabase-golfer-profiles.sql` in the Supabase SQL Editor. Under **Authentication → URL Configuration**, set the Site URL to `https://rickbewl.github.io/fairway-simple/` and include the same address in Redirect URLs so verification links return to the app.
 
 Location access requires HTTPS and user permission. Mapped courses, accounts, scores and chat messages are stored through Supabase security policies. Run each supplied Supabase SQL upgrade only when its corresponding feature has not already been installed.
+
+Profile pictures are resized in the browser to a 512×512 JPEG and stored in the public `golfer-avatars` bucket. Only the signed-in account owner can upload or replace the file, but anyone with its public image URL can view it.
