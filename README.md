@@ -1,47 +1,47 @@
 # Agape Tumoutou Golfers
 
-A mobile-first group golf scorecard with custom course mapping and live GPS yardages.
+![Rick Kulon, app creator](rick-kulon-profile.jpg)
 
-## Features
+A mobile-first fellowship golf companion created by Rick Kulon, featuring shared course mapping, live GPS yardages, protected individual scoring, group scorecards and private round chat.
 
-- Protected 9- and 18-hole shared group scoring
-- Six-character round codes for joining from separate phones
-- Each signed-in golfer can edit only their own scores
-- Persistent golfer login on trusted devices without storing passwords in app code
-- Previous Matches history tied to each golfer account
-- Read-only full-group scorecards for past and in-progress matches
-- Editable player names with no forced "You" label
-- Front, center and back green mapping
-- Course-name and street-address map search
-- Map position retained while moving between holes
-- Live GPS yardages during a round
-- Shared Supabase course library
-- Administrator-only course editing
-- Super-admin promotion of existing users to course admins
-- Persistent Home, Courses and Account navigation
-- Resume an unfinished round after visiting the Home screen
-- Mobile-friendly GitHub Pages deployment
-- Custom Agape Golf home-screen icon for iPhone and Android
-- Private My Clubs carry-distance profile for every golfer
-- Live personalized club suggestions based on center-green GPS distance
-- Password recovery and in-app password changes
-- Automatic live score and player updates using Supabase Realtime
-- Offline score queue with automatic synchronization after reconnecting
-- QR-code and share-link round joining
-- Offline app-shell and saved-course fallback after the first successful load
+## Quick Start
 
-## Deploy
+1. Create a golfer account or sign in.
+2. One golfer creates a round and shares its six-character code or QR.
+3. Other golfers join on their own phones.
+4. Each golfer enters only their own score.
+5. Open **Live Scorecard** to follow the group.
 
-Upload all files to the root of the GitHub repository and publish the `main` branch from `/(root)` in GitHub Pages settings.
+## Current Features
 
-Location access requires HTTPS and the golfer must allow location permission. GitHub Pages provides HTTPS.
+- Protected 9- and 18-hole group scoring
+- Personal score entry defaulted to each hole's par
+- Live full-group scorecards and previous-match history
+- Six-character round codes, share links and QR joining
+- In-app QR camera scanner
+- Private round chat with unread-message alerts
+- Front, center and back green GPS yardages
+- Personal club carry profiles and club suggestions
+- GPS accuracy and off-course recommendation safeguards
+- Shared course maps with course-name and address search
+- Administrator-only course mapping and editing
+- Super-admin management of course administrators
+- Remembered golfer sessions and password recovery
+- Active-round recovery from Home and dedicated Round navigation
+- Offline score queue with synchronization after reconnecting
+- Custom iPhone and Android Home Screen icons
 
-Mapped courses and protected shared-round scores are stored in Supabase. Automatic worldwide course data is not included; an authorized administrator maps each course once for everyone.
+## Contact and Suggestions
 
-Run `supabase-admin-promotion.sql` once in the Supabase SQL Editor to enable the super-admin-only Add Course Admin control.
+Suggestions for improving the app are welcome.
 
-Run `supabase-shared-rounds.sql` once in the Supabase SQL Editor to enable golfer accounts, round codes and score ownership. Each golfer must create or sign in to their own account before creating or joining a round.
+- Email: [ricbkewl@gmail.com](mailto:ricbkewl@gmail.com)
+- Text: [607.438.3208](sms:+16074383208)
 
-No additional SQL is required for match history. It reads each golfer's existing protected round membership and scores from the shared-round tables.
+**Last updated:** August 27, 2026
 
-Run `supabase-four-upgrades.sql` once in the Supabase SQL Editor. It safely enables private carry-distance profiles and live round updates, even if the earlier club-distance SQL was already installed. In Supabase Authentication URL Configuration, set the Site URL to `https://rickbewl.github.io/fairway-simple/` and add the same address to Redirect URLs so password-recovery links return to the app.
+## Deployment Notes
+
+Upload the app files to the repository root and publish the `main` branch from `/(root)` in GitHub Pages settings.
+
+Location access requires HTTPS and user permission. Mapped courses, accounts, scores and chat messages are stored through Supabase security policies. Run each supplied Supabase SQL upgrade only when its corresponding feature has not already been installed.
