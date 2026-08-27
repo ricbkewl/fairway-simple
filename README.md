@@ -33,6 +33,9 @@ A mobile-first fellowship golf companion created by Rick Kulon, featuring shared
 - Larger personal scoring and Live Scorecard controls
 - Optional Aim 1 and Aim 2 markers for single and double dogleg holes
 - Segmented fairway-route arrows, route-distance totals and next-target club guidance
+- Live Map/Satellite switching during a round
+- iPhone Dynamic Island safe-area spacing
+- Current course temperature and condition icon in Suggested Club
 - Live temperature, conditions and wind effect for the current green
 - Personal club carry profiles with a prominent Suggested Club display
 - GPS accuracy and off-course recommendation safeguards
