@@ -112,3 +112,10 @@ main:not(.home-page){padding-top:calc(28px + env(safe-area-inset-top))}.live-map
 .club-refresh-button{display:block;min-width:150px;margin:4px auto 0;padding:9px 18px;border:1px solid rgba(255,255,255,.28);border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font:inherit;font-size:12px;font-weight:850;cursor:pointer}
 .club-refresh-button:active{background:rgba(255,255,255,.22)}
 @media(max-width:390px){.top-weather-compact{min-width:68px;gap:4px}.top-weather-compact>span{font-size:22px}.top-weather-compact b{font-size:16px!important}.top-weather-compact small{max-width:66px;font-size:8px}.gps-card .featured-club .club-recommendation-copy b{font-size:38px}}
+
+/* Short, readable welcome guide */
+.app-guide .guide-tip{background:#fff3ce;border-color:#e2c46d;color:#443713;font-size:15px;line-height:1.5}
+.app-guide .guide-tip b{color:#76570a}
+.guide-features{display:grid;gap:2px}
+.guide-features li{padding-left:2px}
+@media(max-width:420px){.app-guide .guide-tip{font-size:15px;padding:13px 14px}.guide-body ol,.guide-body ul{padding-left:23px}}

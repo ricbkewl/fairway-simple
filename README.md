@@ -57,6 +57,8 @@ A mobile-first fellowship golf companion created by Rick Kulon, featuring shared
 - Offline score queue with synchronization after reconnecting
 - Custom iPhone and Android Home Screen icons
 - Cleaner Suggested Club panel with compact top weather and bottom GPS refresh
+- Streamlined welcome page with account-only match and course management
+- Shorter, higher-contrast App Guide tips and feature summary
 
 ## Contact and Suggestions
 
