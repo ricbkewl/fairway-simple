@@ -1,4 +1,4 @@
-const CACHE_NAME='agape-golf-v14';
+const CACHE_NAME='agape-golf-v15';
 const APP_SHELL=['./','./index.html','./app.js','./styles.css','./manifest.webmanifest','./agape-golf-logo.png','./icon-192.png','./icon-512.png'];
 
 self.addEventListener('install',event=>{
