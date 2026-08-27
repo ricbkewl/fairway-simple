@@ -29,7 +29,10 @@ A mobile-first fellowship golf companion created by Rick Kulon, featuring shared
 - Shared course maps with course-name and address search
 - Administrator-only course mapping and editing
 - Street and MapTiler satellite course-mapping controls
-- On-demand golfer bird's-eye hole previews with tee, green and live-position markers
+- Always-visible forward-facing hole maps rotated from tee toward green
+- Measured tee-to-center hole distance and course-based relative wind arrows
+- Golfer profile-completion reminders
+- Personal match-history removal and host-only permanent round deletion
 - Secure host controls to end or reopen a round and remove scoreless accidental joins
 - Super-admin management of course administrators
 - Private Super Admin player directory listing name, email and phone
@@ -58,7 +61,9 @@ Before deploying the required golfer-profile signup, run `supabase-golfer-profil
 
 Before deploying round-management controls, run `supabase-round-management.sql`. Satellite mapping requires a protected MapTiler API key in `MAPTILER_API_KEY` near the top of `app.js`; without it, street mapping continues to work and the Satellite button remains disabled.
 
-The bird's-eye preview requires a Tee marker and center-green marker for each hole. Existing green data remains unchanged; administrators only need to revisit a course and add its Tee markers.
+Before enabling match removal and permanent host deletion, run `supabase-history-controls.sql` once in the Supabase SQL Editor.
+
+The forward-facing hole map requires a Tee marker and center-green marker for each hole. Existing green data remains unchanged; administrators only need to revisit a course and add its Tee markers.
 
 Location access requires HTTPS and user permission. Mapped courses, accounts, scores and chat messages are stored through Supabase security policies. Run each supplied Supabase SQL upgrade only when its corresponding feature has not already been installed.
 
