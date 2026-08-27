@@ -96,3 +96,19 @@ main:not(.home-page){padding-bottom:112px}
 /* iPhone safe area, live map style and compact course weather */
 main:not(.home-page){padding-top:calc(28px + env(safe-area-inset-top))}.live-map-style-toggle{position:absolute;z-index:970;left:10px;top:91px;display:flex;overflow:hidden;padding:3px;border-radius:11px;background:rgba(12,20,16,.88);box-shadow:0 5px 18px rgba(0,0,0,.25);backdrop-filter:blur(8px)}.live-map-style-toggle button{border:0;border-radius:8px;background:transparent;color:#d3ded8;padding:7px 8px;font:inherit;font-size:9px;font-weight:850;cursor:pointer}.live-map-style-toggle button.on{background:#fff;color:#176b45}.club-weather-inline{display:flex!important;align-items:center;justify-content:center;gap:7px;width:100%;margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,255,255,.18)}.gps-card .featured-club .club-weather-inline>span{margin:0;color:#fff;font-size:24px;line-height:1}.gps-card .featured-club .club-weather-inline>b{margin:0;color:#fff;font-size:20px;line-height:1}.gps-card .featured-club .club-weather-inline>small{color:#d8e8df;font-size:10px;letter-spacing:.02em;text-transform:none}
 @media(max-width:420px){main:not(.home-page){padding-top:calc(22px + env(safe-area-inset-top))}.live-map-style-toggle{top:85px;left:8px}.club-weather-inline{margin-top:8px;padding-top:8px}}
+
+/* Stacked club recommendation with compact top weather and bottom refresh */
+.top-weather-compact{justify-self:end;display:flex;align-items:center;justify-content:flex-end;gap:6px;min-width:80px;text-align:right}
+.top-weather-compact>span{color:#fff;font-size:25px;line-height:1}
+.top-weather-compact>div{display:flex;flex-direction:column;align-items:flex-end;min-width:0}
+.top-weather-compact b{color:#fff!important;font-size:18px!important;line-height:1}
+.top-weather-compact small{display:block;max-width:82px;margin-top:3px;overflow:hidden;color:#d8e8df;font-size:9px;font-weight:750;line-height:1.1;text-overflow:ellipsis;white-space:nowrap}
+.gps-card .featured-club{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;margin:0;padding:12px 8px 10px;text-align:center}
+.gps-card .featured-club .club-symbol{margin:0}
+.gps-card .featured-club .club-recommendation-copy{display:flex;flex-direction:column;align-items:center;width:100%;min-width:0}
+.gps-card .featured-club .club-recommendation-copy small{margin:0 0 2px;color:#c8ddcf;font-size:11px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}
+.gps-card .featured-club .club-recommendation-copy b{margin:0;color:#f5dfa8;font-size:clamp(38px,11vw,52px);line-height:1.02}
+.gps-card .featured-club .club-recommendation-copy span{max-width:390px;margin-top:7px;color:#d7e6de;font-size:12px;line-height:1.4;text-align:center}
+.club-refresh-button{display:block;min-width:150px;margin:4px auto 0;padding:9px 18px;border:1px solid rgba(255,255,255,.28);border-radius:999px;background:rgba(255,255,255,.12);color:#fff;font:inherit;font-size:12px;font-weight:850;cursor:pointer}
+.club-refresh-button:active{background:rgba(255,255,255,.22)}
+@media(max-width:390px){.top-weather-compact{min-width:68px;gap:4px}.top-weather-compact>span{font-size:22px}.top-weather-compact b{font-size:16px!important}.top-weather-compact small{max-width:66px;font-size:8px}.gps-card .featured-club .club-recommendation-copy b{font-size:38px}}
