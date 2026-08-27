@@ -38,3 +38,6 @@ main:not(.home-page){padding-bottom:112px}
 /* QR round joining */
 .qr-overlay{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;padding:20px;background:rgba(5,24,16,.72);backdrop-filter:blur(7px)}.qr-modal{position:relative;width:min(360px,100%);padding:24px;border-radius:22px;background:#fff;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.35)}.qr-modal h2{margin-top:2px}.qr-close{position:absolute;right:12px;top:9px;border:0;background:transparent;color:var(--muted);font-size:30px;cursor:pointer}.qr-modal #roundQr{display:grid;place-items:center;min-height:220px;margin:15px auto}.qr-modal #roundQr img,.qr-modal #roundQr canvas{max-width:100%;height:auto}.qr-code-text{display:block;color:var(--g);font-size:22px;letter-spacing:.16em}
 .scanner-modal{width:min(410px,100%)}#roundQrReader{overflow:hidden;margin:12px auto;border-radius:14px;background:#0a1f17}#roundQrReader video{border-radius:14px}#roundQrReader img{max-width:100%}
+
+/* Scorecard hole and par reference rows */
+.par-row th{background:var(--p);color:var(--g);font-size:12px;border-bottom:2px solid #c8dcd1}
