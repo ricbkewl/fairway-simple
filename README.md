@@ -31,6 +31,8 @@ A mobile-first fellowship golf companion created by Rick Kulon, featuring shared
 - Direction-corrected dragging on forward-facing hole maps
 - Compact center-only yardage display and map-based wind information
 - Larger personal scoring and Live Scorecard controls
+- Optional Aim 1 and Aim 2 markers for single and double dogleg holes
+- Segmented fairway-route arrows, route-distance totals and next-target club guidance
 - Live temperature, conditions and wind effect for the current green
 - Personal club carry profiles with a prominent Suggested Club display
 - GPS accuracy and off-course recommendation safeguards
