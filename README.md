@@ -25,6 +25,8 @@ A mobile-first fellowship golf companion created by Rick Kulon, featuring shared
 - Front, center and back green GPS yardages
 - Compact in-round GPS, club, yardage and weather panel
 - Centered course title and a scorecard control attached to personal scoring
+- Pinch, double-tap and plus/minus zoom controls on the live hole map
+- My Clubs completion reminder for signed-in golfers
 - Live temperature, conditions and wind effect for the current green
 - Personal club carry profiles with a prominent Suggested Club display
 - GPS accuracy and off-course recommendation safeguards
