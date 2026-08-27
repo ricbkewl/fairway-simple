@@ -23,6 +23,8 @@ A mobile-first fellowship golf companion created by Rick Kulon, featuring shared
 - In-app QR camera scanner
 - Private round chat with unread-message alerts
 - Front, center and back green GPS yardages
+- Compact in-round GPS, club, yardage and weather panel
+- Centered course title and a scorecard control attached to personal scoring
 - Live temperature, conditions and wind effect for the current green
 - Personal club carry profiles with a prominent Suggested Club display
 - GPS accuracy and off-course recommendation safeguards
