@@ -18,14 +18,19 @@ A mobile-first fellowship golf companion created by Rick Kulon, featuring shared
 - Protected 9- and 18-hole group scoring
 - Personal score entry defaulted to each hole's par
 - Live full-group scorecards and previous-match history
+- Shareable scorecard images with a copyable text summary
 - Six-character round codes, share links and QR joining
 - In-app QR camera scanner
 - Private round chat with unread-message alerts
 - Front, center and back green GPS yardages
+- Live temperature, conditions and wind effect for the current green
 - Personal club carry profiles with a prominent Suggested Club display
 - GPS accuracy and off-course recommendation safeguards
 - Shared course maps with course-name and address search
 - Administrator-only course mapping and editing
+- Street and MapTiler satellite course-mapping controls
+- On-demand golfer bird's-eye hole previews with tee, green and live-position markers
+- Secure host controls to end or reopen a round and remove scoreless accidental joins
 - Super-admin management of course administrators
 - Private Super Admin player directory listing name, email and phone
 - Required first name, last name, email and phone during signup
@@ -50,6 +55,10 @@ Suggestions for improving the app are welcome.
 Upload the app files to the repository root and publish the `main` branch from `/(root)` in GitHub Pages settings.
 
 Before deploying the required golfer-profile signup, run `supabase-golfer-profiles.sql` in the Supabase SQL Editor. Under **Authentication → URL Configuration**, set the Site URL to `https://rickbewl.github.io/fairway-simple/` and include the same address in Redirect URLs so verification links return to the app.
+
+Before deploying round-management controls, run `supabase-round-management.sql`. Satellite mapping requires a protected MapTiler API key in `MAPTILER_API_KEY` near the top of `app.js`; without it, street mapping continues to work and the Satellite button remains disabled.
+
+The bird's-eye preview requires a Tee marker and center-green marker for each hole. Existing green data remains unchanged; administrators only need to revisit a course and add its Tee markers.
 
 Location access requires HTTPS and user permission. Mapped courses, accounts, scores and chat messages are stored through Supabase security policies. Run each supplied Supabase SQL upgrade only when its corresponding feature has not already been installed.
 
