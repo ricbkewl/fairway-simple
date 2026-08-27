@@ -26,6 +26,7 @@ A mobile-first fellowship golf companion created by Rick Kulon, featuring shared
 - Shared course maps with course-name and address search
 - Administrator-only course mapping and editing
 - Super-admin management of course administrators
+- Private Super Admin directory of registered golfer accounts
 - Remembered golfer sessions and password recovery
 - Active-round recovery from Home and dedicated Round navigation
 - Offline score queue with synchronization after reconnecting
