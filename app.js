@@ -3,7 +3,7 @@ const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 const SUPABASE_URL = 'https://rntmqjqbmjfcpwbbflyz.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_r6fBc5CmRwlyLhTnk7u6BA_rRA1Pmoj';
-const APP_URL = 'https://rickbewl.github.io/fairway-simple/';
+const APP_URL = 'https://ricbkewl.github.io/fairway-simple/';
 const MAPTILER_API_KEY = 'PpgeIcwg8NbSQTMZm4wr';
 const WEATHER_CACHE_MS = 10*60*1000;
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY,{

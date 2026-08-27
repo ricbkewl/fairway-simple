@@ -54,7 +54,7 @@ Suggestions for improving the app are welcome.
 
 Upload the app files to the repository root and publish the `main` branch from `/(root)` in GitHub Pages settings.
 
-Before deploying the required golfer-profile signup, run `supabase-golfer-profiles.sql` in the Supabase SQL Editor. Under **Authentication → URL Configuration**, set the Site URL to `https://rickbewl.github.io/fairway-simple/` and include the same address in Redirect URLs so verification links return to the app.
+Before deploying the required golfer-profile signup, run `supabase-golfer-profiles.sql` in the Supabase SQL Editor. Under **Authentication → URL Configuration**, set the Site URL to `https://ricbkewl.github.io/fairway-simple/` and include the same address in Redirect URLs so verification links return to the app.
 
 Before deploying round-management controls, run `supabase-round-management.sql`. Satellite mapping requires a protected MapTiler API key in `MAPTILER_API_KEY` near the top of `app.js`; without it, street mapping continues to work and the Satellite button remains disabled.
 
