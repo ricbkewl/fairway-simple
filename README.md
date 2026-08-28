@@ -59,6 +59,8 @@ A mobile-first fellowship golf companion created by Rick Kulon, featuring shared
 - Cleaner Suggested Club panel with compact top weather and bottom GPS refresh
 - Streamlined welcome page with account-only match and course management
 - Shorter, higher-contrast App Guide tips and feature summary
+- Automatic editable first-name entry when starting a round
+- Additional iPhone Home Screen safe-area spacing above the logo
 
 ## Contact and Suggestions
 
