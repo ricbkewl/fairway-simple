@@ -211,7 +211,7 @@ main.round-fullscreen .live-hole-map{height:100vh}
 @media(max-width:390px){main.round-fullscreen{height:100vh;min-height:100vh}main.round-fullscreen .live-hole-map{height:100vh}.round-action-bar{bottom:calc(0px - env(safe-area-inset-bottom))}}
 
 /* iPhone Dynamic Island clearance and visible bottom dock */
-.round-fullscreen .round-map-summary{top:max(38px,calc(env(safe-area-inset-top) + 37px))}
+.round-fullscreen .round-map-summary{top:max(28px,calc(env(safe-area-inset-top) + 27px))}
 .round-action-bar{bottom:0}
 @media(max-width:390px){.round-action-bar{bottom:0}}
 
