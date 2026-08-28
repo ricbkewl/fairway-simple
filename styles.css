@@ -190,3 +190,14 @@ main.round-fullscreen .live-hole-map{height:100dvh}
 .round-fullscreen .hole-map-attribution{bottom:calc(5px + env(safe-area-inset-bottom))}
 .round-quick-menu{bottom:calc(64px + env(safe-area-inset-bottom))}
 @media(max-width:390px){main.round-fullscreen .live-hole-map{height:100dvh}.round-action-bar{height:50px;padding:2px 5px}.round-score-dock>button{height:40px}.round-fullscreen .map-club-suggestion,.round-fullscreen .planner-on .map-club-suggestion{bottom:calc(59px + env(safe-area-inset-bottom))}.round-fullscreen .map-zoom-controls{bottom:calc(59px + env(safe-area-inset-bottom))}.planner-line-label-marker.hit-label>span{left:11px}.planner-line-label-marker.go-label>span{right:11px}}
+
+/* Fill the iPhone bottom safe area and dock controls at the true screen edge */
+html:has(main.round-fullscreen),body:has(main.round-fullscreen){overflow:hidden;background:#173c2b}
+main.round-fullscreen{inset:0 0 calc(0px - env(safe-area-inset-bottom)) 0;height:calc(100dvh + env(safe-area-inset-bottom))}
+main.round-fullscreen .live-hole-map{height:100%}
+.round-action-bar{bottom:2px}
+.round-fullscreen .map-club-suggestion,.round-fullscreen .planner-on .map-club-suggestion{bottom:59px}
+.round-fullscreen .map-zoom-controls{bottom:59px}
+.round-fullscreen .hole-map-attribution{bottom:55px}
+.round-quick-menu{bottom:60px}
+@media(max-width:390px){main.round-fullscreen .live-hole-map{height:100%}.round-action-bar{bottom:1px}.round-fullscreen .map-club-suggestion,.round-fullscreen .planner-on .map-club-suggestion{bottom:56px}.round-fullscreen .map-zoom-controls{bottom:56px}.round-fullscreen .hole-map-attribution{bottom:52px}.round-quick-menu{bottom:57px}}
