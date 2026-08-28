@@ -240,3 +240,13 @@ main.round-fullscreen .live-hole-map{height:100vh}
 }
 .round-fullscreen .map-club-suggestion small{font-size:9px}
 .round-fullscreen .map-club-suggestion b{font-size:28px}
+
+/* Balance lower map controls and return the planner to the upper-left */
+.round-fullscreen .live-map-style-toggle{
+  top:auto;
+  bottom:140px;
+  left:auto;
+  right:max(10px,env(safe-area-inset-right));
+  flex-direction:column;
+}
+.round-fullscreen .shot-planner-controls{top:calc(116px + env(safe-area-inset-top))}
