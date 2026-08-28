@@ -221,6 +221,11 @@ main.round-fullscreen .live-hole-map{height:100vh}
 /* Keep round overlays separated after Dynamic Island spacing */
 .round-fullscreen .live-map-style-toggle{top:calc(116px + env(safe-area-inset-top))}
 .round-fullscreen .map-wind-card{top:calc(116px + env(safe-area-inset-top))}
-.round-fullscreen .shot-planner-controls{top:calc(158px + env(safe-area-inset-top))}
+.round-fullscreen .shot-planner-controls{top:calc(174px + env(safe-area-inset-top))}
 .round-fullscreen .map-club-suggestion,
 .round-fullscreen .planner-on .map-club-suggestion{bottom:104px}
+
+/* Larger planner controls and softer map information overlays */
+.round-fullscreen .shot-planner-controls button{padding:9px 12px;font-size:11px}
+.round-fullscreen .round-map-summary,
+.round-fullscreen .map-wind-card{background:rgba(12,20,16,.76)}
