@@ -29,7 +29,8 @@ A mobile-first fellowship golf companion created by Rick Kulon, featuring shared
 - Full-screen active-round map with a dedicated scoring, chat, scorecard and overflow control dock
 - Centered course title and a scorecard control attached to personal scoring
 - Pinch, double-tap and plus/minus zoom controls on the live hole map
-- Default drag-to-aim shot planner with on-map yards-to-hit and route-aware yards-to-go labels
+- Default drag-to-aim shot planner with segment-side yards-to-hit and route-aware yards-to-go labels
+- Slim floating in-round score and navigation dock that leaves the map visible through the iPhone safe area
 - Automatic Aim 1/Aim 2 progression with a calculated mid-hole fallback when no aim point was mapped
 - Tee-aware recommendations that stop suggesting Driver after the golfer moves up the hole
 - My Clubs completion reminder for signed-in golfers
