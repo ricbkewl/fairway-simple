@@ -29,7 +29,8 @@ A mobile-first fellowship golf companion created by Rick Kulon, featuring shared
 - Full-screen active-round map with a dedicated scoring, chat, scorecard and overflow control dock
 - Centered course title and a scorecard control attached to personal scoring
 - Pinch, double-tap and plus/minus zoom controls on the live hole map
-- Optional drag-to-aim shot planner with target distance, remaining distance and a personal club suggestion
+- Default drag-to-aim shot planner with on-map yards-to-hit and route-aware yards-to-go labels
+- Automatic Aim 1/Aim 2 progression with a calculated mid-hole fallback when no aim point was mapped
 - Tee-aware recommendations that stop suggesting Driver after the golfer moves up the hole
 - My Clubs completion reminder for signed-in golfers
 - Searchable shared-course library with mapped satellite previews
@@ -74,7 +75,7 @@ Suggestions for improving the app are welcome.
 - Email: [ricbkewl@gmail.com](mailto:ricbkewl@gmail.com)
 - Text: [607.438.3208](sms:+16074383208)
 
-**Last updated:** August 27, 2026
+**Last updated:** August 28, 2026
 
 ## Deployment Notes
 
