@@ -214,3 +214,6 @@ main.round-fullscreen .live-hole-map{height:100vh}
 .round-fullscreen .round-map-summary{top:max(8px,calc(env(safe-area-inset-top) + 7px))}
 .round-action-bar{bottom:0}
 @media(max-width:390px){.round-action-bar{bottom:0}}
+
+/* Keep map controls clear of the floating round dock */
+.round-fullscreen .map-zoom-controls{bottom:74px}
