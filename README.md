@@ -26,6 +26,7 @@ A mobile-first fellowship golf companion created by Rick Kulon, featuring shared
 - Compact in-round GPS, club, yardage and weather panel
 - Taller active-hole map with a compact icon-free Suggested Club panel
 - Translucent previous/next-hole arrows on the middle edges of the live map
+- Full-screen active-round map with a dedicated scoring, chat, scorecard and overflow control dock
 - Centered course title and a scorecard control attached to personal scoring
 - Pinch, double-tap and plus/minus zoom controls on the live hole map
 - Optional drag-to-aim shot planner with target distance, remaining distance and a personal club suggestion
