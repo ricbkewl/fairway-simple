@@ -18,14 +18,15 @@ A mobile-first fellowship golf companion created by Rick Kulon, featuring shared
 - Protected 9- and 18-hole group scoring
 - Personal score entry defaulted to each hole's par
 - Live full-group scorecards and previous-match history
-- Shareable scorecard images with a copyable text summary
+- Branded shareable scorecard images with the Agape crest and a copyable text summary
 - Six-character round codes, share links and QR joining
 - In-app QR camera scanner
-- Private round chat with unread-message alerts
+- Private round chat with unread-message alerts and a subtle Agape crest watermark
 - Front, center and back green GPS yardages
 - Compact in-round GPS, club, yardage and weather panel
 - Centered course title and a scorecard control attached to personal scoring
 - Pinch, double-tap and plus/minus zoom controls on the live hole map
+- Optional drag-to-aim shot planner with target distance, remaining distance and a personal club suggestion
 - My Clubs completion reminder for signed-in golfers
 - Searchable shared-course library with mapped satellite previews
 - Direction-corrected dragging on forward-facing hole maps
