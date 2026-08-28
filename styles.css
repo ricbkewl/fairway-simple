@@ -229,3 +229,14 @@ main.round-fullscreen .live-hole-map{height:100vh}
 .round-fullscreen .shot-planner-controls button{padding:9px 12px;font-size:11px}
 .round-fullscreen .round-map-summary,
 .round-fullscreen .map-wind-card{background:rgba(12,20,16,.76)}
+
+/* Simplify the playing map and emphasize the club recommendation */
+.round-fullscreen .map-zoom-controls{display:none}
+.round-fullscreen .map-club-suggestion,
+.round-fullscreen .planner-on .map-club-suggestion{
+  bottom:140px;
+  max-width:190px;
+  padding:12px 15px;
+}
+.round-fullscreen .map-club-suggestion small{font-size:9px}
+.round-fullscreen .map-club-suggestion b{font-size:28px}
