@@ -28,6 +28,7 @@ A mobile-first fellowship golf companion created by Rick Kulon, featuring shared
 - Centered course title and a scorecard control attached to personal scoring
 - Pinch, double-tap and plus/minus zoom controls on the live hole map
 - Optional drag-to-aim shot planner with target distance, remaining distance and a personal club suggestion
+- Tee-aware recommendations that stop suggesting Driver after the golfer moves up the hole
 - My Clubs completion reminder for signed-in golfers
 - Searchable shared-course library with mapped satellite previews
 - Direction-corrected dragging on forward-facing hole maps

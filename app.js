@@ -121,9 +121,16 @@ async function saveClubDistances(){
   if(Object.keys(distances).length){const update=await db.auth.updateUser({data:{club_setup_complete:true}});if(!update.error)currentUser=update.data.user}
   alert(Object.keys(distances).length?'Your club distances are saved. Live club suggestions are now ready.':'Your bag is empty, so club suggestions remain turned off.');accountAction();
 }
-function suggestedClubFor(yards){
+function driverAllowedForCurrentShot(){
+  const green=courseById(s.courseId)?.greens?.[s.hole-1];
+  if(!lastKnownPosition||!green?.tee||!golferIsNearHole(green))return true;
+  const teeBuffer=Math.max(35,Math.min(60,(lastGpsAccuracyYards||0)+15));
+  return distanceYards(lastKnownPosition,green.tee)<=teeBuffer;
+}
+function suggestedClubFor(yards,allowDriver=driverAllowedForCurrentShot()){
   if(!Number.isFinite(yards))return null;
-  const bag=Object.entries(clubDistances).map(([club,carry])=>({club,carry:Number(carry)})).filter(x=>Number.isFinite(x.carry)).sort((a,b)=>a.carry-b.carry);
+  const savedBag=Object.entries(clubDistances).map(([club,carry])=>({club,carry:Number(carry)})).filter(x=>Number.isFinite(x.carry)),bag=(allowDriver?savedBag:savedBag.filter(x=>x.club.toLowerCase()!=='driver')).sort((a,b)=>a.carry-b.carry);
+  if(!bag.length&&savedBag.length)return{club:'Fairway Club',note:'Driver is only suggested near the mapped tee. Add your other club distances.'};
   if(!bag.length)return null;
   const shortest=bag[0],longest=bag[bag.length-1];
   if(yards>longest.carry+35)return{club:longest.club,note:`Your longest saved carry is ${longest.carry} yd. Choose a safe lay-up target.`};
@@ -135,7 +142,7 @@ function updateClubSuggestion(centerYards,accuracyYards){
   const title=$('clubSuggestion'),note=$('clubSuggestionNote');if(!title||!note)return;
   if(accuracyYards>50){title.textContent='—';note.textContent='Waiting for a more accurate GPS signal.';return}
   if(centerYards>650){title.textContent='—';note.textContent='Move closer to the mapped hole for a club suggestion.';return}
-  const suggestion=suggestedClubFor(centerYards);
+  const suggestion=suggestedClubFor(centerYards,driverAllowedForCurrentShot());
   if(!suggestion){title.textContent='Set up My Clubs';note.textContent='Add your carry distances under Account to receive suggestions.';return}
   title.textContent=suggestion.club;note.textContent=suggestion.note;
 }
@@ -487,7 +494,7 @@ function toggleShotPlanner(){shotPlannerEnabled=!shotPlannerEnabled;sessionStora
 function resetShotPlannerAim(){if(!shotPlannerGreen)return;delete shotPlannerAims[shotPlannerKey()];const aim=shotPlannerAim(shotPlannerGreen);if(inlinePlannerMarker)inlinePlannerMarker.setLatLng(aim);updateShotPlanner(shotPlannerGreen)}
 function updateShotPlanner(green){
   if(!shotPlannerEnabled||!green?.tee||!green?.center)return;
-  const origin=shotPlannerOrigin(green),aim=shotPlannerAim(green),toTarget=Math.round(distanceYards(origin,aim)),remaining=Math.round(distanceYards(aim,green.center)),suggestion=suggestedClubFor(toTarget);
+  const origin=shotPlannerOrigin(green),aim=shotPlannerAim(green),toTarget=Math.round(distanceYards(origin,aim)),remaining=Math.round(distanceYards(aim,green.center)),suggestion=suggestedClubFor(toTarget,driverAllowedForCurrentShot());
   if(inlinePlannerMarker)inlinePlannerMarker.setLatLng(aim);if(inlinePlannerLines[0])inlinePlannerLines[0].setLatLngs([origin,aim]);if(inlinePlannerLines[1])inlinePlannerLines[1].setLatLngs([aim,green.center]);
   const target=$('plannerTargetYards'),left=$('plannerRemainingYards'),club=$('plannerClub'),mode=$('plannerMode');if(target)target.textContent=toTarget;if(left)left.textContent=remaining;if(club)club.textContent=suggestion?.club||'Set Clubs';if(mode)mode.textContent=golferIsNearHole(green)?'LIVE SHOT PLAN':'TEE PREVIEW';
   if(golferIsNearHole(green)){const yardage=$('centerYards'),label=$('yardageTargetLabel');if(yardage)yardage.textContent=toTarget;if(label)label.textContent='Yards to Target';updateClubSuggestion(toTarget,lastGpsAccuracyYards??999)}
