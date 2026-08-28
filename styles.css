@@ -217,3 +217,10 @@ main.round-fullscreen .live-hole-map{height:100vh}
 
 /* Keep map controls clear of the floating round dock */
 .round-fullscreen .map-zoom-controls{bottom:134px}
+
+/* Keep round overlays separated after Dynamic Island spacing */
+.round-fullscreen .live-map-style-toggle{top:calc(116px + env(safe-area-inset-top))}
+.round-fullscreen .map-wind-card{top:calc(116px + env(safe-area-inset-top))}
+.round-fullscreen .shot-planner-controls{top:calc(158px + env(safe-area-inset-top))}
+.round-fullscreen .map-club-suggestion,
+.round-fullscreen .planner-on .map-club-suggestion{bottom:104px}
