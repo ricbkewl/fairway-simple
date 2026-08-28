@@ -201,3 +201,11 @@ main.round-fullscreen .live-hole-map{height:100%}
 .round-fullscreen .hole-map-attribution{bottom:55px}
 .round-quick-menu{bottom:60px}
 @media(max-width:390px){main.round-fullscreen .live-hole-map{height:100%}.round-action-bar{bottom:1px}.round-fullscreen .map-club-suggestion,.round-fullscreen .planner-on .map-club-suggestion{bottom:56px}.round-fullscreen .map-zoom-controls{bottom:56px}.round-fullscreen .hole-map-attribution{bottom:52px}.round-quick-menu{bottom:57px}}
+
+/* Cross-device full-bleed round map: load enough tiles for every rotation */
+html,body{min-height:100%;background:#173c2b}
+main.round-fullscreen{inset:0;height:100vh;min-height:100vh}
+main.round-fullscreen .live-hole-map{height:100vh}
+.round-fullscreen .live-map-viewport #liveHoleMap{left:-70%;top:-70%;width:240%;height:240%}
+.round-action-bar{bottom:calc(0px - env(safe-area-inset-bottom))}
+@media(max-width:390px){main.round-fullscreen{height:100vh;min-height:100vh}main.round-fullscreen .live-hole-map{height:100vh}.round-action-bar{bottom:calc(0px - env(safe-area-inset-bottom))}}
