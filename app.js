@@ -552,7 +552,7 @@ function initInlineHoleMap(green){
   inlineHoleMap=L.map(container,{zoomControl:false,zoomSnap:.25,dragging:false,scrollWheelZoom:false,doubleClickZoom:'center',boxZoom:false,keyboard:false,touchZoom:'center',attributionControl:false});
   const useStreetAttribution=(fallback=false)=>{const label=document.querySelector('.forward-label'),credit=document.querySelector('.hole-map-attribution');if(label)label.textContent=fallback?'SATELLITE UNAVAILABLE · MAP VIEW · FORWARD':'MAP VIEW · FAIRWAY ROUTE · FORWARD';if(credit){credit.textContent='© OpenStreetMap';credit.href='https://www.openstreetmap.org/copyright/'}};
   if(liveMapStyle==='satellite'&&MAPTILER_API_KEY)addSatelliteLayer(inlineHoleMap,()=>useStreetAttribution(true));else{addStreetLayer(inlineHoleMap);useStreetAttribution(false)}
-  const route=holeRoute(green),points=[...route,green.front,green.back].filter(Boolean);inlineHoleMap.fitBounds(points.map(point=>[point.lat,point.lng]),{padding:[72,48],maxZoom:18});inlineHoleMap.setZoom(inlineHoleMap.getZoom()-1.55,{animate:false});
+  const route=holeRoute(green),points=[...route,green.front,green.back].filter(Boolean);inlineHoleMap.fitBounds(points.map(point=>[point.lat,point.lng]),{padding:[72,48],maxZoom:19});inlineHoleMap.setZoom(inlineHoleMap.getZoom()-1,{animate:false});
   L.circleMarker(green.tee,{radius:9,color:'#fff',weight:3,fillColor:'#d8a93e',fillOpacity:1}).addTo(inlineHoleMap);
   for(const aim of[green.aim1,green.aim2].filter(Boolean))L.circleMarker(aim,{radius:8,color:'#fff',weight:3,fillColor:'#e0bd66',fillOpacity:1}).addTo(inlineHoleMap);
   L.circleMarker(green.center,{radius:10,color:'#fff',weight:3,fillColor:'#176b45',fillOpacity:1}).addTo(inlineHoleMap);
