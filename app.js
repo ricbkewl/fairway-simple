@@ -727,7 +727,7 @@ function mapCourse(){if(!adminRole){s.v='coursesView';render();return}const h=dr
 function setMapStyle(style){if(style==='satellite'&&!MAPTILER_API_KEY){alert('Add the MapTiler API key to activate satellite mapping.');return}draft.mapStyle=style;render()}
 function addStreetLayer(targetMap){return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,attribution:'© OpenStreetMap'}).addTo(targetMap)}
 function addSatelliteLayer(targetMap,onFallback){
-  const layer=L.tileLayer(`https://api.maptiler.com/maps/satellite/256/{z}/{x}/{y}.jpg?key=${encodeURIComponent(MAPTILER_API_KEY)}`,{maxZoom:20,crossOrigin:true,attribution:'<a href="https://www.maptiler.com/copyright/" target="_blank">© MapTiler</a>'});let failures=0,fellBack=false;
+  const layer=L.tileLayer(`https://api.maptiler.com/maps/satellite/256/{z}/{x}/{y}@2x.jpg?key=${encodeURIComponent(MAPTILER_API_KEY)}`,{tileSize:256,maxZoom:22,crossOrigin:true,attribution:'<a href="https://www.maptiler.com/copyright/" target="_blank">© MapTiler</a>'});let failures=0,fellBack=false;
   layer.on('tileerror',()=>{if(fellBack||++failures<3)return;fellBack=true;targetMap.removeLayer(layer);addStreetLayer(targetMap);if(onFallback)onFallback()});return layer.addTo(targetMap);
 }
 function initMap(){
