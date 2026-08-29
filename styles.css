@@ -182,8 +182,7 @@ main.round-fullscreen .live-hole-map{height:calc(100dvh - 60px - env(safe-area-i
 /* Planner labels beside their line segments and half-height floating round dock */
 main.round-fullscreen .live-hole-map{height:100dvh}
 .planner-line-label-marker>span{top:-20px;right:auto;left:auto;transform:rotate(var(--map-bearing,0deg));transform-origin:50% 50%}
-.planner-line-label-marker.hit-label>span{left:13px}
-.planner-line-label-marker.go-label>span{right:13px}
+.planner-line-label-marker.hit-label>span,.planner-line-label-marker.go-label>span{right:26px;left:auto}
 .planner-line-label-marker .hidden{display:none}
 .round-action-bar{left:4px;right:4px;bottom:max(4px,env(safe-area-inset-bottom));height:52px;padding:3px 6px;border:1px solid rgba(23,64,43,.18);border-radius:15px;background:rgba(255,255,255,.92);box-shadow:0 5px 22px rgba(8,35,22,.24)}
 .round-score-dock>button{height:42px}
@@ -191,7 +190,7 @@ main.round-fullscreen .live-hole-map{height:100dvh}
 .round-fullscreen .map-zoom-controls{bottom:calc(62px + env(safe-area-inset-bottom))}
 .round-fullscreen .hole-map-attribution{bottom:calc(5px + env(safe-area-inset-bottom))}
 .round-quick-menu{bottom:calc(64px + env(safe-area-inset-bottom))}
-@media(max-width:390px){main.round-fullscreen .live-hole-map{height:100dvh}.round-action-bar{height:50px;padding:2px 5px}.round-score-dock>button{height:40px}.round-fullscreen .map-club-suggestion,.round-fullscreen .planner-on .map-club-suggestion{bottom:calc(59px + env(safe-area-inset-bottom))}.round-fullscreen .map-zoom-controls{bottom:calc(59px + env(safe-area-inset-bottom))}.planner-line-label-marker.hit-label>span{left:11px}.planner-line-label-marker.go-label>span{right:11px}}
+@media(max-width:390px){main.round-fullscreen .live-hole-map{height:100dvh}.round-action-bar{height:50px;padding:2px 5px}.round-score-dock>button{height:40px}.round-fullscreen .map-club-suggestion,.round-fullscreen .planner-on .map-club-suggestion{bottom:calc(59px + env(safe-area-inset-bottom))}.round-fullscreen .map-zoom-controls{bottom:calc(59px + env(safe-area-inset-bottom))}.planner-line-label-marker.hit-label>span,.planner-line-label-marker.go-label>span{right:22px;left:auto}}
 
 /* Fill the iPhone bottom safe area and dock controls at the true screen edge */
 html:has(main.round-fullscreen),body:has(main.round-fullscreen){overflow:hidden;background:#173c2b}
