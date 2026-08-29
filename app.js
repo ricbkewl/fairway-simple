@@ -291,6 +291,7 @@ async function createSharedRound(){
   alert(`Round created. Share code ${s.joinCode} with the other golfers.`);
 }
 function signedInGolferFirstName(){return golferProfile?.first_name?.trim()||currentUser?.user_metadata?.first_name?.trim()||''}
+function isGenericGolferName(name){return !name?.trim()||/^golfer$/i.test(name.trim())}
 async function requireGolferSignInToJoin(){
   if(currentUser)return true;
   alert('Please sign in before joining the round. Your round code or link will be remembered.');
@@ -327,6 +328,11 @@ async function loadSharedRound(showError=true){
   ]);
   if(roundResult.error||playersResult.error||scoresResult.error){if(showError)alert('Shared scores could not be refreshed. Check your connection.');return false}
   const r=roundResult.data;s.joinCode=r.join_code;s.courseId=r.course_id;s.course=r.course_name;s.holes=r.holes;s.pars=r.pars;s.done=r.status==='complete';s.createdBy=r.created_by;
+  const existingMine=(playersResult.data||[]).find(player=>player.user_id===currentUser.id),profileFirstName=signedInGolferFirstName();
+  if(existingMine&&isGenericGolferName(existingMine.display_name)&&profileFirstName){
+    const renamed=await db.rpc('join_shared_round',{p_join_code:r.join_code,p_display_name:profileFirstName});
+    if(!renamed.error)existingMine.display_name=profileFirstName;
+  }
   sharedPlayers=playersResult.data||[];s.players=sharedPlayers.map(p=>p.display_name);s.scores={};s.putts={};
   for(const score of scoresResult.data||[]){const player=sharedPlayers.find(p=>p.user_id===score.user_id);if(player){s.scores[player.display_name]??={};s.scores[player.display_name][score.hole]=score.strokes}}
   if(!statsResult.error)for(const stat of statsResult.data||[]){const player=sharedPlayers.find(p=>p.user_id===stat.user_id);if(player&&Number.isInteger(stat.putts)){s.putts[player.display_name]??={};s.putts[player.display_name][stat.hole]=stat.putts}}
@@ -767,7 +773,7 @@ function chatPhotoMarkup(item){
   return`<button class="chat-photo-button" onclick="openChatPhoto('${esc(item.id)}')" aria-label="Open shared photo"><img src="${esc(item.media_url)}" alt="Photo shared in the round chat" loading="lazy"></button>`;
 }
 function chatView(){
-  const nameFor=userId=>sharedPlayers.find(player=>player.user_id===userId)?.display_name||'Golfer';
+  const nameFor=userId=>{const saved=sharedPlayers.find(player=>player.user_id===userId)?.display_name;if(userId===currentUser?.id&&isGenericGolferName(saved))return signedInGolferFirstName()||saved||'Golfer';return saved||'Golfer'};
   app.classList.add('chat-page');
   app.innerHTML=`<div class="row"><button class="back" onclick="s.v='round';render()">← Round</button><button class="back" onclick="loadRoundMessages().then(()=>render())">Refresh</button></div><h1>Round Chat</h1><p class="muted">Only golfers in this round can see these messages and photos.</p><div class="chat-message-stage"><div class="chat-watermark" aria-hidden="true"><img src="agape-golf-logo.png" alt=""></div><section id="chatMessages" class="chat-messages">${chatMessages.length?chatMessages.map(item=>`<article class="chat-bubble ${item.user_id===currentUser.id?'mine':''}"><b>${esc(nameFor(item.user_id))}</b>${chatPhotoMarkup(item)}${item.message?`<p>${esc(item.message)}</p>`:''}<small>${new Date(item.created_at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</small></article>`).join(''):'<div class="empty">No messages yet. Say hello to the group!</div>'}</section></div><form class="chat-compose" onsubmit="event.preventDefault();sendRoundMessage()"><label id="chatMediaButton" class="chat-media-button" aria-label="Take or choose a photo" title="Take or choose a photo">📷<input id="chatPhotoInput" type="file" accept="image/*" onchange="uploadChatPhoto(this.files[0]);this.value=''" ${chatMediaReady?'':'disabled'}></label><input id="chatInput" maxlength="500" autocomplete="off" placeholder="Message everyone" aria-label="Chat message"><button type="submit">Send</button></form>`;
   setTimeout(()=>{const box=$('chatMessages');if(box)box.scrollTop=box.scrollHeight},0);
