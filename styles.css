@@ -118,6 +118,7 @@ main:not(.home-page){padding-top:calc(28px + env(safe-area-inset-top))}.live-map
 .app-guide .guide-tip b{color:#76570a}
 .guide-features{display:grid;gap:2px}
 .guide-features li{padding-left:2px}
+.guide-opening-line{display:block;scroll-margin-top:10px}
 @media(max-width:420px){.app-guide .guide-tip{font-size:15px;padding:13px 14px}.guide-body ol,.guide-body ul{padding-left:23px}}
 
 /* Keep the Home logo below iPhone camera and Dynamic Island areas */
