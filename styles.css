@@ -273,6 +273,29 @@ main.round-fullscreen .live-hole-map{height:100vh}
 .round-score-dock>.round-score-display:active{box-shadow:0 1px 0 #b68e37,0 2px 4px rgba(68,48,12,.16);transform:translateY(1px)}
 .round-score-display b{font-size:22px;line-height:1}
 .round-score-display small{margin-top:2px;color:#715a25;font-size:7px;font-weight:900;white-space:nowrap}
+
+/* Contextual restore-hole control shown after the golfer pans or zooms */
+.map-recenter-button{
+  position:absolute;
+  z-index:980;
+  right:max(10px,env(safe-area-inset-right));
+  bottom:225px;
+  display:grid;
+  width:42px;
+  height:42px;
+  place-items:center;
+  border:1px solid rgba(255,255,255,.42);
+  border-radius:12px;
+  background:rgba(12,20,16,.62);
+  box-shadow:0 5px 16px rgba(0,0,0,.25);
+  backdrop-filter:blur(7px);
+  cursor:pointer;
+}
+.map-recenter-button span{position:relative;width:20px;height:20px;border:1px solid rgba(255,255,255,.95);border-radius:50%}
+.map-recenter-button span::before,.map-recenter-button span::after{position:absolute;background:#fff;content:""}
+.map-recenter-button span::before{top:calc(50% - .5px);right:-5px;left:-5px;height:1px}
+.map-recenter-button span::after{top:-5px;bottom:-5px;left:calc(50% - .5px);width:1px}
+.map-recenter-button:active{transform:scale(.96)}
 .score-entry-overlay{position:fixed;z-index:6000;inset:0;display:flex;align-items:flex-end;justify-content:center;background:rgba(3,15,9,.38);backdrop-filter:blur(3px)}
 .score-entry-sheet{width:min(620px,100%);max-height:min(84dvh,760px);overflow:auto;padding:18px 18px calc(18px + env(safe-area-inset-bottom));border-radius:25px 25px 0 0;background:#fff;box-shadow:0 -18px 60px rgba(0,0,0,.3)}
 .score-entry-sheet header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:17px}
