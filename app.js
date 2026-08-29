@@ -10,8 +10,9 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY,{
   auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage}
 });
 const CLUBS=['Driver','3 Wood','5 Wood','7 Wood','2 Hybrid','3 Hybrid','4 Hybrid','5 Hybrid','2 Iron','3 Iron','4 Iron','5 Iron','6 Iron','7 Iron','8 Iron','9 Iron','Pitching Wedge','Gap Wedge','Sand Wedge','Lob Wedge'];
-const roundDefault = {v:'home',course:'',courseId:null,holes:18,players:[''],pars:[],scores:{},hole:1,done:false,resumeView:null,ownerUserId:null,createdBy:null};
+const roundDefault = {v:'home',course:'',courseId:null,holes:18,players:[''],pars:[],scores:{},putts:{},hole:1,done:false,resumeView:null,ownerUserId:null,createdBy:null};
 let s = JSON.parse(localStorage.atgRound || 'null') || roundDefault;
+if(!s.putts)s.putts={};
 if(s.players?.length===1&&s.players[0]==='You'&&['home','setup'].includes(s.v))s.players=[''];
 let courses = JSON.parse(localStorage.atgCourses||'[]');
 let currentUser = null;
@@ -37,7 +38,9 @@ const shotPlannerAims={};
 let coursePreviewMaps=[];
 let liveMapStyle=localStorage.atgLiveMapStyle==='street'?'street':'satellite';
 let pendingScores=JSON.parse(localStorage.atgPendingScores||'{}');
+let pendingHoleStats=JSON.parse(localStorage.atgPendingHoleStats||'{}');
 let scoreSyncPromise=null;
+let statsSyncPromise=null;
 let recoveryMode=false;
 const save=()=>{localStorage.atgRound=JSON.stringify(s)};
 const rel=n=>n===0?'E':n>0?'+'+n:n;
@@ -58,7 +61,7 @@ function home(){const canResume=(s.sharedRoundId||['setup','pars','round','recap
 function myRoundPlayerName(){return s.players.find(name=>isMyPlayer(name))||s.players[0]||''}
 function roundBottomNav(){
   const name=myRoundPlayerName(),encoded=encodeURIComponent(name),holeScore=scoreValue(name)||Number(s.pars[s.hole-1])||0,roundTotal=total(name,s.hole);
-  app.insertAdjacentHTML('beforeend',`<nav class="round-action-bar" aria-label="Round controls"><div class="round-score-dock"><button onclick="changeScore('${encoded}',-1)" aria-label="Subtract one stroke">−</button><div><b>${holeScore}</b><small>Total ${roundTotal}</small></div><button onclick="changeScore('${encoded}',1)" aria-label="Add one stroke">+</button></div><button class="round-dock-button" onclick="openRoundChat()" ${s.sharedRoundId?'':'disabled'}><span class="chat-nav-icon">💬<i id="chatUnreadBadge" class="chat-unread ${unreadChatCount?'':'hidden'}">${unreadChatCount>99?'99+':unreadChatCount}</i></span><small>Chat</small></button><button class="round-dock-button" onclick="openScorecard()"><span>▦</span><small>Scorecard</small></button><button class="round-dock-button" onclick="showRoundQuickMenu()"><span>•••</span><small>Menu</small></button></nav>`)
+  app.insertAdjacentHTML('beforeend',`<nav class="round-action-bar" aria-label="Round controls"><div class="round-score-dock"><button onclick="changeScore('${encoded}',-1)" aria-label="Subtract one stroke">−</button><button class="round-score-display" onclick="openScoreEntry()" aria-label="Enter score for Hole ${s.hole}"><b id="roundHoleScore">${holeScore}</b><small id="roundScoreTotal">Total ${roundTotal}</small></button><button onclick="changeScore('${encoded}',1)" aria-label="Add one stroke">+</button></div><button class="round-dock-button" onclick="openRoundChat()" ${s.sharedRoundId?'':'disabled'}><span class="chat-nav-icon">💬<i id="chatUnreadBadge" class="chat-unread ${unreadChatCount?'':'hidden'}">${unreadChatCount>99?'99+':unreadChatCount}</i></span><small>Chat</small></button><button class="round-dock-button" onclick="openScorecard()"><span>▦</span><small>Scorecard</small></button><button class="round-dock-button" onclick="showRoundQuickMenu()"><span>•••</span><small>Menu</small></button></nav>`)
 }
 function bottomNav(){if(s.v==='round'){roundBottomNav();return}app.insertAdjacentHTML('beforeend',`<nav class="bottom-nav ${s.sharedRoundId?'has-chat':''}" aria-label="Main navigation"><button onclick="goHome()"><span>⌂</span>Home</button>${s.sharedRoundId?'<button onclick="openCurrentRound()"><span>🏌</span>Round</button>':''}<button onclick="openCoursesFromNav()"><span>⛳</span>${adminRole==='super_admin'?'Courses/Players':'Courses'}</button>${s.sharedRoundId?`<button onclick="openRoundChat()"><span class="chat-nav-icon">💬<i id="chatUnreadBadge" class="chat-unread ${unreadChatCount?'':'hidden'}">${unreadChatCount>99?'99+':unreadChatCount}</i></span>Chat</button>`:''}<button onclick="accountAction()"><span>${currentUser?'●':'♙'}</span>${currentUser?'Account':'Login'}</button></nav>`)}
 function closeRoundQuickMenu(){document.querySelector('.round-quick-overlay')?.remove()}
@@ -80,7 +83,7 @@ async function initializeCloud(){
   if(s.ownerUserId&&s.ownerUserId!==currentUser?.id)s={...roundDefault};
   await Promise.all([loadAdminRole(),loadCourses(),loadClubDistances(),loadGolferProfile()]);
   cloudLoading=false;render();
-  await syncPendingScores();
+  await Promise.all([syncPendingScores(),syncPendingHoleStats()]);
   const linkedCode=new URLSearchParams(location.search).get('join');
   const pendingCode=linkedCode||localStorage.atgPendingJoinCode;
   if(pendingCode&&!recoveryMode)setTimeout(()=>joinRoundWithCode(pendingCode),250);
@@ -260,7 +263,7 @@ async function promoteCourseAdmin(){
   if(error){alert('Administrator was not added: '+error.message);return}
   alert(`${data.email} is now a course administrator.`);
 }
-async function start(){if(!currentUser){alert('Each golfer needs an account so scores can be protected. Please sign in or create an account first.');await signInAccount();if(!currentUser)return}if(s.resumeView&&!s.done&&!confirm('Start a new round? Your unfinished round will be replaced.'))return;const playerName=golferProfile?.first_name?.trim()||'';s={...roundDefault,v:'setup',players:[playerName],scores:{},pars:[],resumeView:'setup',sharedRoundId:null,joinCode:null,ownerUserId:currentUser.id};render()}
+async function start(){if(!currentUser){alert('Each golfer needs an account so scores can be protected. Please sign in or create an account first.');await signInAccount();if(!currentUser)return}if(s.resumeView&&!s.done&&!confirm('Start a new round? Your unfinished round will be replaced.'))return;const playerName=golferProfile?.first_name?.trim()||'';s={...roundDefault,v:'setup',players:[playerName],scores:{},putts:{},pars:[],resumeView:'setup',sharedRoundId:null,joinCode:null,ownerUserId:currentUser.id};render()}
 function setup(){const options=courses.map(c=>`<option value="${esc(c.id)}" ${s.courseId===c.id?'selected':''}>${esc(c.name)} (${c.holes} holes)</option>`).join('');app.innerHTML=`<button class="back" onclick="goHome()">← Back</button><h1>Create a Round</h1><p class="muted">Choose a saved course to start immediately, or create a custom scorecard.</p><label>Saved course</label><select id="savedCourse" onchange="chooseCourse(this.value)"><option value="">Custom scorecard without GPS</option>${options}</select>${s.courseId?`<div class="notice">The saved GPS markers and hole pars will be used automatically.</div>`:`<label>Course name</label><input id="course" value="${esc(s.course)}" placeholder="e.g., Oak Valley Golf Club"><label>How many holes?</label><div class="row"><button class="choice ${s.holes===9?'on':''}" onclick="setHoles(9)">9 Holes</button><button class="choice ${s.holes===18?'on':''}" onclick="setHoles(18)">18 Holes</button></div>`}<label>Your name for this round</label><input aria-label="Your name for this round" value="${esc(s.players[0]||'')}" placeholder="Enter your name" oninput="updatePlayer(0,this.value)"><div class="notice">Your profile first name is entered automatically, but you can edit it. Other golfers join from their own phones.</div><button id="${s.courseId?'createRoundButton':'setupContinueButton'}" class="primary" onclick="goPars()">${s.courseId?'Create Protected Round':'Continue'}</button>`}
 function chooseCourse(id){const c=courseById(id);if(c){s.courseId=c.id;s.course=c.name;s.holes=c.holes;s.pars=[...c.pars]}else{s.courseId=null;s.course='';s.pars=[]}render()}
 function setHoles(n){s.holes=n;render()}
@@ -291,22 +294,25 @@ async function joinRoundWithCode(code){
   const {data,error}=await db.rpc('join_shared_round',{p_join_code:code.trim(),p_display_name:name.trim()});
   if(error){alert('Could not join round: '+error.message);return}
   delete localStorage.atgPendingJoinCode;history.replaceState({},'',location.pathname);
-  s={...roundDefault,v:'round',players:[name.trim()],scores:{},sharedRoundId:data.round_id,joinCode:data.join_code,resumeView:'round',ownerUserId:currentUser.id};
+  s={...roundDefault,v:'round',players:[name.trim()],scores:{},putts:{},sharedRoundId:data.round_id,joinCode:data.join_code,resumeView:'round',ownerUserId:currentUser.id};
   await loadSharedRound(false);render();
 }
 async function loadSharedRound(showError=true){
   if(!s.sharedRoundId||!currentUser)return false;
-  const [roundResult,playersResult,scoresResult]=await Promise.all([
+  const [roundResult,playersResult,scoresResult,statsResult]=await Promise.all([
     db.from('shared_rounds').select('id,join_code,course_id,course_name,holes,pars,status,created_by').eq('id',s.sharedRoundId).single(),
     db.from('round_players').select('user_id,display_name,joined_at').eq('round_id',s.sharedRoundId).order('joined_at'),
-    db.from('round_scores').select('user_id,hole,strokes').eq('round_id',s.sharedRoundId)
+    db.from('round_scores').select('user_id,hole,strokes').eq('round_id',s.sharedRoundId),
+    db.from('round_hole_stats').select('user_id,hole,putts').eq('round_id',s.sharedRoundId)
   ]);
   if(roundResult.error||playersResult.error||scoresResult.error){if(showError)alert('Shared scores could not be refreshed. Check your connection.');return false}
   const r=roundResult.data;s.joinCode=r.join_code;s.courseId=r.course_id;s.course=r.course_name;s.holes=r.holes;s.pars=r.pars;s.done=r.status==='complete';s.createdBy=r.created_by;
-  sharedPlayers=playersResult.data||[];s.players=sharedPlayers.map(p=>p.display_name);s.scores={};
+  sharedPlayers=playersResult.data||[];s.players=sharedPlayers.map(p=>p.display_name);s.scores={};s.putts={};
   for(const score of scoresResult.data||[]){const player=sharedPlayers.find(p=>p.user_id===score.user_id);if(player){s.scores[player.display_name]??={};s.scores[player.display_name][score.hole]=score.strokes}}
+  if(!statsResult.error)for(const stat of statsResult.data||[]){const player=sharedPlayers.find(p=>p.user_id===stat.user_id);if(player&&Number.isInteger(stat.putts)){s.putts[player.display_name]??={};s.putts[player.display_name][stat.hole]=stat.putts}}
   const mine=sharedPlayers.find(p=>p.user_id===currentUser.id);
   if(mine)for(const pending of Object.values(pendingScores)){if(pending.round_id===s.sharedRoundId&&pending.user_id===currentUser.id){s.scores[mine.display_name]??={};s.scores[mine.display_name][pending.hole]=pending.strokes}}
+  if(mine)for(const pending of Object.values(pendingHoleStats)){if(pending.round_id===s.sharedRoundId&&pending.user_id===currentUser.id){s.putts[mine.display_name]??={};s.putts[mine.display_name][pending.hole]=pending.putts}}
   subscribeToRound(s.sharedRoundId);
   return true;
 }
@@ -331,6 +337,24 @@ async function syncPendingScores(){
     }
   })();
   try{return await scoreSyncPromise}finally{scoreSyncPromise=null}
+}
+function pendingHoleStatKey(item){return`${item.round_id}:${item.user_id}:${item.hole}`}
+function persistPendingHoleStats(){localStorage.atgPendingHoleStats=JSON.stringify(pendingHoleStats)}
+async function syncPendingHoleStats(){
+  if(!currentUser||!navigator.onLine)return false;
+  if(statsSyncPromise)return statsSyncPromise;
+  const syncUserId=currentUser.id;
+  statsSyncPromise=(async()=>{
+    while(true){
+      const entries=Object.entries(pendingHoleStats).filter(([,item])=>item.user_id===syncUserId);
+      if(!entries.length)return true;
+      const {error}=await db.from('round_hole_stats').upsert(entries.map(([,item])=>item));
+      if(error)return false;
+      for(const [key,item] of entries)if(pendingHoleStats[key]?.updated_at===item.updated_at)delete pendingHoleStats[key];
+      persistPendingHoleStats();
+    }
+  })();
+  try{return await statsSyncPromise}finally{statsSyncPromise=null}
 }
 function scheduleRealtimeRefresh(){clearTimeout(realtimeTimer);realtimeTimer=setTimeout(async()=>{if(!s.sharedRoundId)return;await loadSharedRound(false);if(['round','recap'].includes(s.v))render()},350)}
 function scheduleChatRefresh(){clearTimeout(chatTimer);chatTimer=setTimeout(async()=>{if(!s.sharedRoundId)return;await loadRoundMessages(false);if(s.v==='chatView')render()},250)}
@@ -481,6 +505,23 @@ async function shareScorecardData(data){
 function shareCurrentScorecard(){return shareScorecardData(currentScorecardSnapshot())}
 function shareHistoryScorecard(){return shareScorecardData(historyScorecardSnapshot())}
 function scoreValue(p){return s.scores[p]?.[s.hole]||0}
+function scoreName(score,par){const delta=score-par;return delta<=-2?'Eagle':delta===-1?'Birdie':delta===0?'Par':delta===1?'Bogey':delta===2?'Double':`${delta>0?'+':''}${delta}`}
+function scoreChoiceClass(score,par){return score<par?'under':score>par?'over':'par'}
+function scoreEntryMarkup(){
+  const name=myRoundPlayerName(),par=Number(s.pars[s.hole-1])||4,score=scoreValue(name)||par,putts=s.putts?.[name]?.[s.hole];
+  const scoreButtons=Array.from({length:9},(_,index)=>index+1).map(value=>`<button class="score-choice ${scoreChoiceClass(value,par)} ${value===score?'selected':''}" onclick="setExactHoleScore(${value})"><b>${value}</b><small>${scoreName(value,par)}</small></button>`).join('');
+  const puttButtons=[0,1,2,3,4].map(value=>`<button class="putt-choice ${value===putts?'selected':''}" onclick="setHolePutts(${value})">${value===4?'4+':value}</button>`).join('');
+  return`<section class="score-entry-sheet" role="dialog" aria-modal="true" aria-label="Score Hole ${s.hole}"><header><div><small>HOLE ${s.hole}</small><h2>Enter Your Score</h2><span>Par ${par}</span></div><button onclick="closeScoreEntry()" aria-label="Close score entry">×</button></header><h3>Strokes</h3><div class="score-choice-grid">${scoreButtons}<button class="score-choice more-score" onclick="chooseExtendedScore()"><b>10+</b><small>More</small></button></div><h3>Putts <small>Optional</small></h3><div class="putt-choice-grid">${puttButtons}</div><footer><button onclick="scoreEntryPrevious()" ${s.hole===1?'disabled':''}>‹</button><button class="save-score-button" onclick="closeScoreEntry()">Save Hole ${s.hole}</button><button onclick="scoreEntryNext()">›</button></footer></section>`
+}
+function openScoreEntry(){document.querySelector('.score-entry-overlay')?.remove();const overlay=document.createElement('div');overlay.className='score-entry-overlay';overlay.onclick=event=>{if(event.target===overlay)closeScoreEntry()};overlay.innerHTML=scoreEntryMarkup();document.body.appendChild(overlay)}
+function closeScoreEntry(){document.querySelector('.score-entry-overlay')?.remove()}
+function refreshScoreEntry(){const overlay=document.querySelector('.score-entry-overlay');if(overlay)overlay.innerHTML=scoreEntryMarkup();const name=myRoundPlayerName(),score=$('roundHoleScore'),roundTotal=$('roundScoreTotal');if(score)score.textContent=scoreValue(name)||Number(s.pars[s.hole-1])||0;if(roundTotal)roundTotal.textContent=`Total ${total(name,s.hole)}`}
+function queueSharedScore(strokes){if(!s.sharedRoundId||!currentUser)return;const item={round_id:s.sharedRoundId,user_id:currentUser.id,hole:s.hole,strokes,updated_at:new Date().toISOString()};pendingScores[pendingScoreKey(item)]=item;persistPendingScores();syncPendingScores()}
+function setExactHoleScore(strokes){const name=myRoundPlayerName(),value=Math.max(1,Math.min(20,Number(strokes)||1));if(!name)return;s.scores[name]??={};s.scores[name][s.hole]=value;save();queueSharedScore(value);refreshScoreEntry()}
+function chooseExtendedScore(){const value=Number(prompt('Enter strokes from 10 to 20:'));if(Number.isInteger(value)&&value>=10&&value<=20)setExactHoleScore(value)}
+function setHolePutts(putts){const name=myRoundPlayerName(),value=Math.max(0,Math.min(4,Number(putts)||0));if(!name)return;s.putts??={};s.putts[name]??={};s.putts[name][s.hole]=value;save();if(s.sharedRoundId&&currentUser){const item={round_id:s.sharedRoundId,user_id:currentUser.id,hole:s.hole,putts:value,updated_at:new Date().toISOString()};pendingHoleStats[pendingHoleStatKey(item)]=item;persistPendingHoleStats();syncPendingHoleStats()}refreshScoreEntry()}
+function scoreEntryPrevious(){if(s.hole<=1)return;closeScoreEntry();s.hole--;render();setTimeout(openScoreEntry,0)}
+function scoreEntryNext(){closeScoreEntry();if(s.hole<s.holes){s.hole++;render();setTimeout(openScoreEntry,0)}else{if(!s.sharedRoundId)s.done=true;s.v='recap';render()}}
 function ensureCurrentHolePar(){
   const par=Number(s.pars[s.hole-1]);if(!par)return;
   const mine=s.sharedRoundId?sharedPlayers.find(player=>player.user_id===currentUser?.id):null;
@@ -781,7 +822,7 @@ db.auth.onAuthStateChange((event,session)=>{
     setTimeout(()=>changePassword(),250);
   }
 });
-window.addEventListener('online',async()=>{await syncPendingScores();await loadCourses();if(s.sharedRoundId)await loadSharedRound(false);render()});
+window.addEventListener('online',async()=>{await Promise.all([syncPendingScores(),syncPendingHoleStats()]);await loadCourses();if(s.sharedRoundId)await loadSharedRound(false);render()});
 window.addEventListener('offline',updateSyncIndicator);
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
 initializeCloud();
