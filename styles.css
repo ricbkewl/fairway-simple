@@ -247,6 +247,8 @@ main.round-fullscreen .live-hole-map{height:100vh}
   bottom:140px;
   left:auto;
   right:max(10px,env(safe-area-inset-right));
+  box-sizing:border-box;
+  width:64px;
   flex-direction:column;
 }
 .round-fullscreen .shot-planner-controls{top:calc(116px + env(safe-area-inset-top))}
@@ -281,8 +283,9 @@ main.round-fullscreen .live-hole-map{height:100vh}
   right:max(10px,env(safe-area-inset-right));
   bottom:225px;
   display:grid;
-  width:42px;
-  height:42px;
+  box-sizing:border-box;
+  width:64px;
+  height:46px;
   place-items:center;
   border:1px solid rgba(255,255,255,.42);
   border-radius:12px;
