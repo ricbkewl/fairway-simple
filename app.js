@@ -28,7 +28,7 @@ let registeredGolfers=[],registeredGolfersLoading=false,registeredGolfersError='
 let golferProfile=null,golferProfileError='',signupEmail='',usersReturnView='accountView',coursesReturnView='home';
 let clubDistances={},clubProfileError='';
 let roundChannel=null,subscribedRoundId=null,realtimeTimer=null;
-let chatMessages=[],chatTimer=null,unreadChatCount=0,chatToastTimer=null;
+let chatMessages=[],chatTimer=null,unreadChatCount=0,chatToastTimer=null,chatMediaReady=true;
 let qrScanner=null,qrScanLocked=false;
 let avatarCacheVersion=Date.now();
 let currentWeather=null,weatherLoading=false,weatherCache=JSON.parse(localStorage.atgWeatherCache||'{}');
@@ -51,7 +51,7 @@ function avatarUrl(path){if(!path)return'';return db.storage.from('golfer-avatar
 function avatarMarkup(path,name,className='profile-photo'){const label=name||'Golfer';return path?`<img class="${className}" src="${esc(avatarUrl(path))}" alt="${esc(label)} profile picture">`:`<span class="${className} avatar-fallback">${esc(label.charAt(0).toUpperCase()||'G')}</span>`}
 
 function render(){save();document.querySelector('meta[name="theme-color"]')?.setAttribute('content',s.v==='round'?'#f7faf8':'#064c32');stopLocation();if(inlineHoleMap){inlineHoleMap.remove();inlineHoleMap=null;inlineGolferMarker=null;inlineHoleGreen=null;inlineViewResetting=false;inlinePlannerMarker=null;inlinePlannerLines=[];inlinePlannerLabels=[];shotPlannerGreen=null}for(const previewMap of coursePreviewMaps){try{previewMap.remove()}catch{}}coursePreviewMaps=[];if(map){if(draft){const center=map.getCenter();draft.mapView={lat:center.lat,lng:center.lng,zoom:map.getZoom()}}map.remove();map=null}app.className='';({home,setup,pars,round,recap,coursesView,mapCourse,accountView,historyView,historyDetailView,clubsView,chatView,usersView,signupView,profileView,roundManageView}[s.v]||home)();if(!['home','signupView'].includes(s.v))bottomNav()}
-function appGuide(){return`<details class="app-guide"><summary><span>App Guide & About</span><b>＋</b></summary><div class="guide-body"><section class="founder-card"><img src="rick-kulon-profile.jpg" alt="Rick Kulon, creator of the Agape Tumoutou Golfers app"><div><small>CREATED FOR THE FELLOWSHIP</small><h2>Agape Tumoutou Golfers</h2><p>A shared golf companion created by Rick Kulon for easier, fairer and more connected fellowship rounds.</p></div></section><h3>Quick Start</h3><ol><li>Sign up, then <b>verify your email</b> before signing in.</li><li>Finish your profile and save your club distances.</li><li>Create a round and share its code or QR, or join a friend's round.</li><li>Each golfer uses their own phone and enters only their own score.</li></ol><h3>Save It to Your Home Screen</h3><div class="install-guide"><section><h4>iPhone or iPad</h4><ol><li>Open in <b>Safari</b>.</li><li>Tap <b>Share → Add to Home Screen → Add</b>.</li></ol></section><section><h4>Android</h4><ol><li>Open in <b>Chrome</b>.</li><li>Tap the menu, then <b>Install app</b> or <b>Add to Home screen</b>.</li></ol></section></div><div class="notice guide-tip"><b>Tip:</b> If the link opens in Messages or Facebook, choose <b>Open in Safari</b> or <b>Open in Chrome</b> first.</div><h3>My Clubs & Suggested Club</h3><p>Open <b>Account → My Clubs & Distances</b> and save your normal carry distance. Suggested Club uses those personal distances during play.</p><div class="notice guide-tip"><b>Remember:</b> Check the wind, hazards and lie before choosing your club.</div><h3>What the App Does</h3><ul class="guide-features"><li>Shared courses with searchable street and satellite maps</li><li>Default movable shot planner with Aim 1/Aim 2 guidance</li><li>On-map yards to hit, route remaining and personalized club suggestions</li><li>Protected scoring, live scorecards, sharing and match history</li><li>Round codes, join QR, group chat and unread alerts</li><li>Remembered accounts, profiles and golfer pictures</li><li>Host controls plus secure administrator course tools</li><li>Current-round recovery, offline score sync and Home Screen icons</li></ul><div class="guide-update">Last updated August 28, 2026</div><div class="guide-contact"><p>Suggestions for improving the app are welcome.</p><a href="mailto:ricbkewl@gmail.com?subject=Agape%20Golf%20App%20Suggestion">✉ ricbkewl@gmail.com</a><a href="sms:+16074383208">✆ Text 607.438.3208</a></div></div></details>`}
+function appGuide(){return`<details class="app-guide"><summary><span>App Guide & About</span><b>＋</b></summary><div class="guide-body"><section class="founder-card"><img src="rick-kulon-profile.jpg" alt="Rick Kulon, creator of the Agape Tumoutou Golfers app"><div><small>CREATED FOR THE FELLOWSHIP</small><h2>Agape Tumoutou Golfers</h2><p>A shared golf companion created by Rick Kulon for easier, fairer and more connected fellowship rounds.</p></div></section><h3>Quick Start</h3><ol><li>Sign up, then <b>verify your email</b> before signing in.</li><li>Finish your profile and save your club distances.</li><li>Create a round and share its code or QR, or join a friend's round.</li><li>Each golfer uses their own phone and enters only their own score.</li></ol><h3>Save It to Your Home Screen</h3><div class="install-guide"><section><h4>iPhone or iPad</h4><ol><li>Open in <b>Safari</b>.</li><li>Tap <b>Share → Add to Home Screen → Add</b>.</li></ol></section><section><h4>Android</h4><ol><li>Open in <b>Chrome</b>.</li><li>Tap the menu, then <b>Install app</b> or <b>Add to Home screen</b>.</li></ol></section></div><div class="notice guide-tip"><b>Tip:</b> If the link opens in Messages or Facebook, choose <b>Open in Safari</b> or <b>Open in Chrome</b> first.</div><h3>My Clubs & Suggested Club</h3><p>Open <b>Account → My Clubs & Distances</b> and save your normal carry distance. Suggested Club uses those personal distances during play.</p><div class="notice guide-tip"><b>Remember:</b> Check the wind, hazards and lie before choosing your club.</div><h3>What the App Does</h3><ul class="guide-features"><li>Shared courses with searchable street and satellite maps</li><li>Default movable shot planner with Aim 1/Aim 2 guidance</li><li>On-map yards to hit, route remaining and personalized club suggestions</li><li>Protected scoring, live scorecards, sharing and match history</li><li>Round codes, join QR, private group chat, photo sharing and unread alerts</li><li>Remembered accounts, profiles and golfer pictures</li><li>Host controls plus secure administrator course tools</li><li>Current-round recovery, offline score sync and Home Screen icons</li></ul><div class="guide-update">Last updated August 29, 2026</div><div class="guide-contact"><p>Suggestions for improving the app are welcome.</p><a href="mailto:ricbkewl@gmail.com?subject=Agape%20Golf%20App%20Suggestion">✉ ricbkewl@gmail.com</a><a href="sms:+16074383208">✆ Text 607.438.3208</a></div></div></details>`}
 function activeRoundHomeCard(){if(!s.sharedRoundId||!s.joinCode)return'';if(s.done)return`<section class="active-round-card"><div><small>COMPLETED ROUND</small><b>${esc(s.course)}</b><span>Your scorecard is saved.</span></div><div class="active-round-actions completed-actions"><button onclick="openCurrentRound()">Scorecard</button>${s.createdBy===currentUser?.id?'<button onclick="openRoundManagement()">Manage</button>':''}<button onclick="shareCurrentScorecard()">Share</button></div></section>`;return`<section class="active-round-card"><div><small>ACTIVE ROUND</small><b>${esc(s.course)}</b><span>Join code <strong>${esc(s.joinCode)}</strong></span></div><div class="active-round-actions"><button onclick="copyRoundCode()">Copy</button><button onclick="showRoundQr()">Show Join QR</button><button onclick="shareRoundLink()">Share</button></div></section>`}
 function profileMissingItems(){if(!currentUser)return[];const missing=[];if(!golferProfile?.first_name||!golferProfile?.last_name)missing.push('your full name');if(!golferProfile?.phone)missing.push('your phone number');if(!golferProfile?.avatar_path)missing.push('a profile picture');return missing}
 function profileCompletionReminder(){const missing=profileMissingItems();if(!missing.length)return'';return`<button class="profile-reminder" onclick="openProfile()"><span>!</span><div><b>Finish Your Golfer Profile</b><small>Add ${esc(missing.join(', '))}.</small></div><i>→</i></button>`}
@@ -364,7 +364,7 @@ function showChatToast(item){
   const sender=sharedPlayers.find(player=>player.user_id===item.user_id)?.display_name||'A golfer';
   const toast=document.createElement('button');toast.className='chat-toast';toast.type='button';
   const title=document.createElement('b');title.textContent=`New message from ${sender}`;
-  const message=document.createElement('span');message.textContent=String(item.message||'').slice(0,100);
+  const message=document.createElement('span');message.textContent=String(item.message||'Shared a photo').slice(0,100);
   toast.append(title,message);toast.onclick=()=>openRoundChat();document.body.appendChild(toast);
   chatToastTimer=setTimeout(()=>toast.remove(),5000);
 }
@@ -444,8 +444,9 @@ async function hideMatchFromHistory(roundId){
 }
 async function deleteMatchForEveryone(roundId){
   if(!historyControlsReady){alert('Install the History Controls SQL update in Supabase first.');return}
-  const course=historyCourseName(roundId);if(!confirm(`Permanently delete ${course} for every golfer? All players, scores and chat messages from this round will be erased.`))return;
+  const course=historyCourseName(roundId);if(!confirm(`Permanently delete ${course} for every golfer? All players, scores, chat messages and shared photos from this round will be erased.`))return;
   if(!confirm('This cannot be undone. Delete the shared round permanently?'))return;
+  const mediaDeleted=await deleteRoundChatMedia(roundId);if(!mediaDeleted)return;
   const {error}=await db.rpc('delete_owned_round',{p_round_id:roundId});if(error){alert('The round could not be deleted: '+error.message);return}
   if(s.sharedRoundId===roundId)s={...roundDefault};historyDetail=null;await openHistory();
 }
@@ -725,14 +726,29 @@ async function openRoundChat(){
 }
 async function loadRoundMessages(showError=true){
   if(!s.sharedRoundId||!currentUser)return false;
-  const {data,error}=await db.from('round_messages').select('id,user_id,message,created_at').eq('round_id',s.sharedRoundId).order('created_at').limit(200);
-  if(error){if(showError)alert('Round chat could not be loaded. Make sure the Supabase chat upgrade has been installed.');return false}
-  chatMessages=data||[];return true;
+  let result=await db.from('round_messages').select('id,user_id,message,media_path,media_type,media_name,created_at').eq('round_id',s.sharedRoundId).order('created_at').limit(200);
+  if(result.error&&/media_(path|type|name)/i.test(result.error.message||'')){
+    chatMediaReady=false;
+    result=await db.from('round_messages').select('id,user_id,message,created_at').eq('round_id',s.sharedRoundId).order('created_at').limit(200);
+  }else chatMediaReady=!result.error;
+  if(result.error){if(showError)alert('Round chat could not be loaded. Make sure the Supabase chat upgrade has been installed.');return false}
+  chatMessages=result.data||[];
+  const paths=[...new Set(chatMessages.map(item=>item.media_path).filter(Boolean))];
+  if(paths.length){
+    const signed=await db.storage.from('round-chat-media').createSignedUrls(paths,3600);
+    if(!signed.error){const urls=new Map((signed.data||[]).map(item=>[item.path,item.signedUrl]));chatMessages=chatMessages.map(item=>({...item,media_url:urls.get(item.media_path)||''}))}
+  }
+  return true;
+}
+function chatPhotoMarkup(item){
+  if(!item.media_path)return'';
+  if(!item.media_url)return'<div class="chat-photo-unavailable">Photo unavailable</div>';
+  return`<button class="chat-photo-button" onclick="openChatPhoto('${esc(item.id)}')" aria-label="Open shared photo"><img src="${esc(item.media_url)}" alt="Photo shared in the round chat" loading="lazy"></button>`;
 }
 function chatView(){
   const nameFor=userId=>sharedPlayers.find(player=>player.user_id===userId)?.display_name||'Golfer';
   app.classList.add('chat-page');
-  app.innerHTML=`<div class="row"><button class="back" onclick="s.v='round';render()">← Round</button><button class="back" onclick="loadRoundMessages().then(()=>render())">Refresh</button></div><h1>Round Chat</h1><p class="muted">Only golfers in this round can see these messages.</p><div class="chat-message-stage"><div class="chat-watermark" aria-hidden="true"><img src="agape-golf-logo.png" alt=""></div><section id="chatMessages" class="chat-messages">${chatMessages.length?chatMessages.map(item=>`<article class="chat-bubble ${item.user_id===currentUser.id?'mine':''}"><b>${esc(nameFor(item.user_id))}</b><p>${esc(item.message)}</p><small>${new Date(item.created_at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</small></article>`).join(''):'<div class="empty">No messages yet. Say hello to the group!</div>'}</section></div><form class="chat-compose" onsubmit="event.preventDefault();sendRoundMessage()"><input id="chatInput" maxlength="500" autocomplete="off" placeholder="Message everyone in this round" aria-label="Chat message"><button type="submit">Send</button></form>`;
+  app.innerHTML=`<div class="row"><button class="back" onclick="s.v='round';render()">← Round</button><button class="back" onclick="loadRoundMessages().then(()=>render())">Refresh</button></div><h1>Round Chat</h1><p class="muted">Only golfers in this round can see these messages and photos.</p><div class="chat-message-stage"><div class="chat-watermark" aria-hidden="true"><img src="agape-golf-logo.png" alt=""></div><section id="chatMessages" class="chat-messages">${chatMessages.length?chatMessages.map(item=>`<article class="chat-bubble ${item.user_id===currentUser.id?'mine':''}"><b>${esc(nameFor(item.user_id))}</b>${chatPhotoMarkup(item)}${item.message?`<p>${esc(item.message)}</p>`:''}<small>${new Date(item.created_at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</small></article>`).join(''):'<div class="empty">No messages yet. Say hello to the group!</div>'}</section></div><form class="chat-compose" onsubmit="event.preventDefault();sendRoundMessage()"><label id="chatMediaButton" class="chat-media-button" aria-label="Take or choose a photo" title="Take or choose a photo">📷<input id="chatPhotoInput" type="file" accept="image/*" onchange="uploadChatPhoto(this.files[0]);this.value=''" ${chatMediaReady?'':'disabled'}></label><input id="chatInput" maxlength="500" autocomplete="off" placeholder="Message everyone" aria-label="Chat message"><button type="submit">Send</button></form>`;
   setTimeout(()=>{const box=$('chatMessages');if(box)box.scrollTop=box.scrollHeight},0);
 }
 async function sendRoundMessage(){
@@ -741,6 +757,40 @@ async function sendRoundMessage(){
   const {error}=await db.from('round_messages').insert({round_id:s.sharedRoundId,user_id:currentUser.id,message});
   if(error){input.disabled=false;alert('Message could not be sent: '+error.message);return}
   input.value='';await loadRoundMessages(false);render();
+}
+async function resizeChatPhoto(file){
+  if(!file?.type.startsWith('image/'))throw new Error('Choose a photo from your camera or photo library.');
+  if(file.size>20*1024*1024)throw new Error('Choose a photo smaller than 20 MB.');
+  const source=await new Promise((resolve,reject)=>{const image=new Image(),url=URL.createObjectURL(file);image.onload=()=>{URL.revokeObjectURL(url);resolve(image)};image.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('This photo format could not be opened. Try JPEG or PNG.'))};image.src=url});
+  const maxSide=1600,scale=Math.min(1,maxSide/Math.max(source.naturalWidth,source.naturalHeight)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(source.naturalWidth*scale));canvas.height=Math.max(1,Math.round(source.naturalHeight*scale));canvas.getContext('2d').drawImage(source,0,0,canvas.width,canvas.height);
+  const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('The photo could not be prepared.')),'image/jpeg',.78));
+  if(blob.size>3*1024*1024)throw new Error('This photo is still too large after compression. Choose a smaller image.');
+  return blob;
+}
+async function uploadChatPhoto(file){
+  if(!file)return;
+  if(!chatMediaReady){alert('Install the Chat Photos SQL update in Supabase first.');return}
+  const button=$('chatMediaButton'),input=$('chatInput'),caption=input?.value.trim()||null;if(button){button.classList.add('uploading');button.setAttribute('aria-label','Uploading photo')}
+  let path='';
+  try{
+    const blob=await resizeChatPhoto(file),id=globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random().toString(16).slice(2)}`;path=`${s.sharedRoundId}/${currentUser.id}/${id}.jpg`;
+    const upload=await db.storage.from('round-chat-media').upload(path,blob,{contentType:'image/jpeg',cacheControl:'86400',upsert:false});if(upload.error)throw upload.error;
+    const saved=await db.from('round_messages').insert({round_id:s.sharedRoundId,user_id:currentUser.id,message:caption,media_path:path,media_type:'image/jpeg',media_name:'round-photo.jpg'});
+    if(saved.error){await db.storage.from('round-chat-media').remove([path]);throw saved.error}
+    if(input)input.value='';await loadRoundMessages(false);render();
+  }catch(error){if(path)await db.storage.from('round-chat-media').remove([path]);alert('Photo could not be shared: '+(error.message||'Unknown error'));if(button){button.classList.remove('uploading');button.setAttribute('aria-label','Take or choose a photo')}}
+}
+function openChatPhoto(messageId){
+  const item=chatMessages.find(message=>message.id===messageId);if(!item?.media_url)return;
+  const overlay=document.createElement('div');overlay.className='chat-photo-viewer';overlay.innerHTML=`<div class="chat-photo-viewer-card"><button class="chat-photo-close" aria-label="Close photo">×</button><img src="${esc(item.media_url)}" alt="Shared round photo"><a href="${esc(item.media_url)}" target="_blank" rel="noopener" download="${esc(item.media_name||'round-photo.jpg')}">↓ Save or Download Photo</a><small>On iPhone, use Share → Save Image if it opens in a new window.</small></div>`;overlay.onclick=event=>{if(event.target===overlay||event.target.closest('.chat-photo-close'))overlay.remove()};document.body.appendChild(overlay);
+}
+async function deleteRoundChatMedia(roundId){
+  const result=await db.from('round_messages').select('media_path').eq('round_id',roundId).not('media_path','is',null);
+  if(result.error&&/media_path/i.test(result.error.message||''))return true;
+  if(result.error){alert('The round photos could not be checked, so nothing was deleted. Try again.');return false}
+  const paths=[...new Set((result.data||[]).map(item=>item.media_path).filter(Boolean))];
+  for(let i=0;i<paths.length;i+=1000){const removed=await db.storage.from('round-chat-media').remove(paths.slice(i,i+1000));if(removed.error){alert('The round photos could not be removed, so the round was kept to prevent orphaned files. Try again.');return false}}
+  return true;
 }
 function recap(){const host=s.createdBy===currentUser?.id;app.innerHTML=`<button class="back" onclick="s.v='round';render()">← Back to round</button><div class="row"><div><h1>${s.done?'Round Complete':'Live Scorecard'}</h1><p class="muted">${esc(s.course)} · ${s.holes} holes</p></div>${s.sharedRoundId?'<button class="locate" onclick="refreshSharedRound()">Refresh</button>':''}</div><div class="table-wrap"><table><thead><tr><th>Hole #</th>${s.pars.map((_,i)=>`<th>${i+1}</th>`).join('')}<th>Total</th><th>+/−</th></tr><tr class="par-row"><th>Par</th>${s.pars.map(x=>`<th>${x}</th>`).join('')}<th>${parTotal(s.holes)}</th><th>E</th></tr></thead><tbody>${s.players.map(x=>`<tr><td><b>${esc(x)}${isMyPlayer(x)?' (You)':''}</b></td>${s.pars.map((_,i)=>`<td>${s.scores[x]?.[i+1]||'–'}</td>`).join('')}<td>${total(x)||'–'}</td><td class="green">${total(x)?rel(total(x)-parTotal(s.holes)):'–'}</td></tr>`).join('')}</tbody></table></div><div class="scorecard-actions"><button class="primary" onclick="shareCurrentScorecard()">Share Scorecard</button>${host?'<button class="secondary" onclick="openRoundManagement()">Manage Round</button>':''}<button class="secondary" onclick="finishRound()">${s.done?'Return Home':'Leave Scorecard'}</button></div>`}
 function finishRound(){s.resumeView=null;s.v='home';render()}
