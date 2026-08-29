@@ -250,3 +250,20 @@ main.round-fullscreen .live-hole-map{height:100vh}
   flex-direction:column;
 }
 .round-fullscreen .shot-planner-controls{top:calc(116px + env(safe-area-inset-top))}
+
+/* Field-test update: fixed hole distance plus live route remaining */
+.round-fullscreen .round-map-summary{
+  grid-template-columns:.48fr .78fr .43fr 1.18fr .62fr;
+}
+.round-fullscreen .round-map-summary>div{padding:6px 3px}
+.round-fullscreen .round-map-summary small{font-size:7px;letter-spacing:.055em;white-space:nowrap}
+.round-fullscreen .round-map-summary b{font-size:23px}
+.round-fullscreen .round-map-summary i{font-size:8px}
+.round-fullscreen .hole-distance-summary b,
+.round-fullscreen .route-remaining-summary b{display:flex;align-items:baseline;justify-content:center;gap:3px}
+@media(max-width:390px){
+  .round-fullscreen .round-map-summary{grid-template-columns:.46fr .76fr .42fr 1.14fr .6fr}
+  .round-fullscreen .round-map-summary small{font-size:6px;letter-spacing:.035em}
+  .round-fullscreen .round-map-summary b{font-size:21px}
+  .round-fullscreen .round-map-summary i{font-size:7px}
+}
