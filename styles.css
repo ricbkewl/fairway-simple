@@ -119,6 +119,7 @@ main:not(.home-page){padding-top:calc(28px + env(safe-area-inset-top))}.live-map
 .guide-features{display:grid;gap:2px}
 .guide-features li{padding-left:2px}
 .guide-opening-line{display:block;scroll-margin-top:10px}
+.guide-close-button{width:100%;height:50px;margin-top:16px;border:1px solid #e0bd66;border-radius:12px;background:#e0bd66;color:#173126;font:inherit;font-weight:850;cursor:pointer}
 @media(max-width:420px){.app-guide .guide-tip{font-size:15px;padding:13px 14px}.guide-body ol,.guide-body ul{padding-left:23px}}
 
 /* Keep the Home logo below iPhone camera and Dynamic Island areas */
@@ -303,7 +304,9 @@ main.round-fullscreen .live-hole-map{height:100vh}
 
 /* Private round-chat photo sharing */
 .chat-page .chat-compose{grid-template-columns:auto minmax(0,1fr) auto}
-.chat-media-button{position:relative;display:grid;place-items:center;width:50px;height:50px;border:1px solid #b8d7c5;border-radius:12px;background:#edf8f2;font-size:24px;cursor:pointer}
+.chat-page .chat-compose{align-items:center}
+.chat-page .chat-compose input,.chat-page .chat-compose button,.chat-media-button{height:50px;margin:0}
+.chat-media-button{position:relative;display:grid;place-items:center;width:50px;border:1px solid #b8d7c5;border-radius:12px;background:#edf8f2;font-size:24px;line-height:1;cursor:pointer}
 .chat-media-button input{display:none}
 .chat-media-button.uploading{opacity:.55;pointer-events:none}
 .chat-photo-button{display:block;overflow:hidden;width:min(260px,68vw);margin:7px 0 5px;padding:0!important;border:0!important;border-radius:12px!important;background:#dfe9e3!important;box-shadow:none!important}
@@ -315,7 +318,7 @@ main.round-fullscreen .live-hole-map{height:100vh}
 .chat-photo-viewer-card>a{border-radius:12px;background:#fff;color:var(--g);padding:11px 16px;font-size:13px;font-weight:850;text-decoration:none}
 .chat-photo-viewer-card>small{color:#e0ebe4;text-align:center}
 .chat-photo-close{position:absolute;z-index:1;top:8px;right:8px;display:grid;width:42px;height:42px;place-items:center;border:1px solid rgba(255,255,255,.55);border-radius:50%;background:rgba(0,0,0,.62);color:#fff;font-size:29px;line-height:1;cursor:pointer}
-@media(max-width:390px){.chat-page .chat-compose{gap:6px}.chat-media-button{width:46px;height:48px}.chat-page .chat-compose button{min-width:60px;padding:0 11px}}
+@media(max-width:390px){.chat-page .chat-compose{gap:6px}.chat-page .chat-compose input,.chat-page .chat-compose button,.chat-media-button{height:48px}.chat-media-button{width:48px}.chat-page .chat-compose button{min-width:60px;padding:0 11px}}
 .score-entry-overlay{position:fixed;z-index:6000;inset:0;display:flex;align-items:flex-end;justify-content:center;background:rgba(3,15,9,.38);backdrop-filter:blur(3px)}
 .score-entry-sheet{width:min(620px,100%);max-height:min(84dvh,760px);overflow:auto;padding:18px 18px calc(18px + env(safe-area-inset-bottom));border-radius:25px 25px 0 0;background:#fff;box-shadow:0 -18px 60px rgba(0,0,0,.3)}
 .score-entry-sheet header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:17px}
