@@ -286,19 +286,31 @@ async function createSharedRound(){
   await loadSharedRound(false);s.v='round';render();
   alert(`Round created. Share code ${s.joinCode} with the other golfers.`);
 }
+function signedInGolferFirstName(){return golferProfile?.first_name?.trim()||currentUser?.user_metadata?.first_name?.trim()||''}
+async function requireGolferSignInToJoin(){
+  if(currentUser)return true;
+  alert('Please sign in before joining the round. Your round code or link will be remembered.');
+  return await signInAccount();
+}
+function scorecardNameForJoin(){
+  const firstName=signedInGolferFirstName();
+  const name=prompt('Name on the scorecard (you can edit it):',firstName);
+  return name?.trim()||'';
+}
 async function joinRound(){
+  if(!await requireGolferSignInToJoin())return;
   const code=prompt('Enter the 6-character round code:');if(!code)return;
   await joinRoundWithCode(code.trim());
 }
 async function joinRoundWithCode(code){
   if(!code)return;
   localStorage.atgPendingJoinCode=code.toUpperCase();
-  if(!currentUser){alert('Please sign in or create a golfer account first. The round link will be remembered.');const signedIn=await signInAccount();if(!signedIn)return}
-  const name=prompt('Enter your player name:');if(!name?.trim())return;
-  const {data,error}=await db.rpc('join_shared_round',{p_join_code:code.trim(),p_display_name:name.trim()});
+  if(!await requireGolferSignInToJoin())return;
+  const name=scorecardNameForJoin();if(!name)return;
+  const {data,error}=await db.rpc('join_shared_round',{p_join_code:code.trim(),p_display_name:name});
   if(error){alert('Could not join round: '+error.message);return}
   delete localStorage.atgPendingJoinCode;history.replaceState({},'',location.pathname);
-  s={...roundDefault,v:'round',players:[name.trim()],scores:{},putts:{},sharedRoundId:data.round_id,joinCode:data.join_code,resumeView:'round',ownerUserId:currentUser.id};
+  s={...roundDefault,v:'round',players:[name],scores:{},putts:{},sharedRoundId:data.round_id,joinCode:data.join_code,resumeView:'round',ownerUserId:currentUser.id};
   await loadSharedRound(false);render();
 }
 async function loadSharedRound(showError=true){
@@ -711,6 +723,7 @@ async function closeQrScanner(){
 }
 async function showQrScanner(){
   if(!window.Html5Qrcode){alert('The QR scanner could not load. Use your phone camera or enter the round code instead.');return}
+  if(!await requireGolferSignInToJoin())return;
   await closeQrScanner();qrScanLocked=false;
   const overlay=document.createElement('div');overlay.className='qr-overlay qr-scanner-overlay';overlay.onclick=event=>{if(event.target===overlay)closeQrScanner()};
   overlay.innerHTML=`<section class="qr-modal scanner-modal"><button class="qr-close" onclick="closeQrScanner()">×</button><h2>Scan Round QR</h2><p class="muted">Point the camera at another golfer's join QR.</p><div id="roundQrReader"></div><div id="qrScannerStatus" class="small muted">Requesting camera access…</div><button class="secondary" onclick="closeQrScanner()">Cancel</button></section>`;
