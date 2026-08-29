@@ -313,3 +313,7 @@ main.round-fullscreen .live-hole-map{height:100vh}
 .round-qr-summary img{display:block;width:45px;height:45px;border:1px solid rgba(245,207,104,.72);border-radius:12px;box-shadow:0 3px 9px rgba(0,0,0,.35);transition:transform .08s ease,box-shadow .08s ease}
 .round-qr-summary button:active img{box-shadow:0 1px 3px rgba(0,0,0,.28);transform:translateY(2px) scale(.96)}
 @media(max-width:390px){.round-qr-summary img{width:41px;height:41px;border-radius:10px}}
+
+/* Emphasize live distance and soften the combined weather/wind overlay */
+.round-fullscreen .route-remaining-summary b{color:#f5cf68;text-shadow:0 1px 4px rgba(0,0,0,.35)}
+.round-fullscreen .map-wind-card{background:rgba(12,20,16,.56);backdrop-filter:blur(6px)}
