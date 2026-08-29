@@ -317,3 +317,20 @@ main.round-fullscreen .live-hole-map{height:100vh}
 /* Emphasize live distance and soften the combined weather/wind overlay */
 .round-fullscreen .route-remaining-summary b{color:#f5cf68;text-shadow:0 1px 4px rgba(0,0,0,.35)}
 .round-fullscreen .map-wind-card{background:rgba(12,20,16,.56);backdrop-filter:blur(6px)}
+
+/* Use the upper portion of the iPhone gesture-safe area for the round dock */
+.round-action-bar{
+  bottom:calc(0px - min(24px,env(safe-area-inset-bottom)));
+  overflow:visible;
+}
+.round-action-bar:after{
+  position:absolute;
+  z-index:-1;
+  top:calc(100% - 2px);
+  left:-1px;
+  right:-1px;
+  height:calc(env(safe-area-inset-bottom) + 26px);
+  background:rgba(255,255,255,.92);
+  content:"";
+}
+@media(max-width:390px){.round-action-bar{bottom:calc(0px - min(20px,env(safe-area-inset-bottom)))}}
