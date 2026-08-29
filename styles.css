@@ -298,3 +298,10 @@ main.round-fullscreen .live-hole-map{height:100vh}
 .score-entry-sheet footer .save-score-button{background:var(--g);color:#fff;font-size:14px}
 .score-entry-sheet footer button:disabled{opacity:.32}
 @media(max-width:390px){.score-entry-sheet{padding:15px 14px calc(14px + env(safe-area-inset-bottom))}.score-entry-sheet header{margin-bottom:12px}.score-entry-sheet header h2{font-size:22px}.score-choice{min-height:55px}.score-choice b{font-size:21px}.putt-choice{height:46px}}
+
+/* Combine temperature and conditions with course-relative wind */
+.round-fullscreen .map-wind-card{width:84px;padding:7px 6px 9px}
+.map-weather-temperature{display:flex;align-items:center;justify-content:center;gap:3px;width:100%;margin-bottom:4px;padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,.18)}
+.map-weather-temperature span{font-size:18px;line-height:1}
+.map-weather-temperature b{font-size:15px;line-height:1}
+.round-fullscreen .map-wind-arrow{font-size:30px}
