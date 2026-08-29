@@ -318,19 +318,14 @@ main.round-fullscreen .live-hole-map{height:100vh}
 .round-fullscreen .route-remaining-summary b{color:#f5cf68;text-shadow:0 1px 4px rgba(0,0,0,.35)}
 .round-fullscreen .map-wind-card{background:rgba(12,20,16,.56);backdrop-filter:blur(6px)}
 
-/* Use the upper portion of the iPhone gesture-safe area for the round dock */
-.round-action-bar{
-  bottom:calc(0px - min(24px,env(safe-area-inset-bottom)));
-  overflow:visible;
-}
-.round-action-bar:after{
-  position:absolute;
-  z-index:-1;
-  top:calc(100% - 2px);
-  left:-1px;
-  right:-1px;
-  height:calc(env(safe-area-inset-bottom) + 26px);
-  background:rgba(255,255,255,.92);
-  content:"";
-}
-@media(max-width:390px){.round-action-bar{bottom:calc(0px - min(20px,env(safe-area-inset-bottom)))}}
+/* Keep the controls clear of the Home gesture and visually merge its safe area */
+html:has(main.round-fullscreen),
+body:has(main.round-fullscreen),
+main.round-fullscreen{background:#f7faf8}
+main.round-fullscreen .live-hole-map{background:#173c2b}
+.round-action-bar{bottom:0;overflow:visible}
+.round-action-bar:after{display:none}
+.round-dock-button>span{height:27px;font-size:25px;line-height:27px}
+.round-dock-button>span.chat-nav-icon{font-size:24px}
+.round-score-dock>button:not(.round-score-display){font-size:28px}
+@media(max-width:390px){.round-action-bar{bottom:0}.round-dock-button>span{font-size:24px}.round-dock-button>span.chat-nav-icon{font-size:23px}.round-score-dock>button:not(.round-score-display){font-size:27px}}
