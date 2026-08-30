@@ -417,3 +417,38 @@ main.round-fullscreen .live-hole-map{background:#173c2b}
   }
   .round-fullscreen .shot-planner-controls{bottom:calc(58px + env(safe-area-inset-bottom))}
 }
+
+/* Larger top readout and balanced square map controls */
+.round-fullscreen .round-map-summary small{
+  font-size:8.5px;
+  letter-spacing:.06em;
+}
+.round-fullscreen .round-map-summary b{font-size:27px}
+.round-fullscreen .round-map-summary i{font-size:9px}
+.round-fullscreen .live-map-style-toggle{
+  bottom:calc(62px + env(safe-area-inset-bottom));
+}
+.round-fullscreen .map-recenter-button{
+  bottom:calc(134px + env(safe-area-inset-bottom));
+}
+.round-fullscreen .shot-planner-controls{
+  width:64px;
+}
+.round-fullscreen .shot-planner-controls button{
+  display:grid;
+  width:64px;
+  min-height:43px;
+  place-items:center;
+  padding:4px 5px;
+  border-radius:10px;
+  font-size:9px;
+  line-height:1.05;
+  text-align:center;
+}
+@media(max-width:390px){
+  .round-fullscreen .round-map-summary small{font-size:7.25px;letter-spacing:.04em}
+  .round-fullscreen .round-map-summary b{font-size:24px}
+  .round-fullscreen .round-map-summary i{font-size:8px}
+  .round-fullscreen .live-map-style-toggle{bottom:calc(58px + env(safe-area-inset-bottom))}
+  .round-fullscreen .map-recenter-button{bottom:calc(130px + env(safe-area-inset-bottom))}
+}
