@@ -452,3 +452,23 @@ main.round-fullscreen .live-hole-map{background:#173c2b}
   .round-fullscreen .live-map-style-toggle{bottom:calc(58px + env(safe-area-inset-bottom))}
   .round-fullscreen .map-recenter-button{bottom:calc(130px + env(safe-area-inset-bottom))}
 }
+
+/* Course previews and names start a round after confirmation */
+.course-start-target{cursor:pointer}
+.course-start-target:focus-visible{outline:3px solid #d5ad51;outline-offset:-3px}
+.course-name-start{
+  display:block;
+  max-width:100%;
+  margin:4px 0 2px;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:var(--ink);
+  font:inherit;
+  font-size:21px;
+  font-weight:850;
+  line-height:1.15;
+  text-align:left;
+  cursor:pointer;
+}
+.course-name-start:focus-visible{outline:2px solid #d5ad51;outline-offset:3px;border-radius:3px}
