@@ -482,3 +482,8 @@ main.round-fullscreen .live-hole-map{background:#173c2b}
 @media(max-width:390px){
   .round-fullscreen .map-recenter-button{top:calc(234px + env(safe-area-inset-top))}
 }
+/* Google Maps renderer: preserve gestures, framing and required attribution above the round dock */
+.live-map-viewport.google-map-active{touch-action:auto}
+.live-map-viewport.google-map-active #liveHoleMap{left:0;top:0;width:100%;height:100%;transform:none!important}
+.google-map-active .gm-style{font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+.round-fullscreen .live-map-viewport.google-map-active #liveHoleMap{inset:0 0 calc(50px + env(safe-area-inset-bottom)) 0;width:auto;height:auto}
