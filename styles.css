@@ -487,3 +487,13 @@ main.round-fullscreen .live-hole-map{background:#173c2b}
 .live-map-viewport.google-map-active #liveHoleMap{left:0;top:0;width:100%;height:100%;transform:none!important}
 .google-map-active .gm-style{font-family:system-ui,-apple-system,Segoe UI,sans-serif}
 .round-fullscreen .live-map-viewport.google-map-active #liveHoleMap{inset:0 0 calc(50px + env(safe-area-inset-bottom)) 0;width:auto;height:auto}
+
+/* Readable guide copy and intelligent course-mapping review */
+.founder-card p,.guide-body>p{text-align:justify;text-align-last:left;text-justify:inter-word;hyphens:auto}
+.marker-tabs.four-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
+.tee-set-tabs .marker-tab{min-height:46px}
+.mapping-draft-notice{border-color:#d3aa43;background:#fff8df}
+.mapping-review-panel{display:grid;gap:9px;margin:16px 0;padding:14px;border:1px solid #d3aa43;border-radius:15px;background:#fff9e8}
+.mapping-review-panel>b{color:#7a5810;font-size:12px;letter-spacing:.04em}
+.mapping-review-panel>span{color:var(--muted);font-size:13px}
+.mapping-review-panel .primary,.mapping-review-panel .secondary{margin:0}
