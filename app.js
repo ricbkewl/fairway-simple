@@ -89,7 +89,7 @@ function positionExpandedGuide(details){
   const headings=[...details.querySelectorAll('.guide-body > h3')],beforeHeading=headings.find(heading=>heading.textContent==='Before Your First Round'),installHeading=headings.find(heading=>heading.textContent==='Save It to Your Home Screen');
   const beforeList=beforeHeading?.nextElementSibling,installGuide=installHeading?.nextElementSibling,installTip=installGuide?.nextElementSibling;
   if(beforeList&&installHeading&&installGuide&&installTip)beforeList.after(installHeading,installGuide,installTip);
-  const update=details.querySelector('.guide-update');if(update)update.textContent='Current feature guide · Version 87 · Updated August 30, 2026';
+  const update=details.querySelector('.guide-update');if(update)update.textContent='Current feature guide · Version 88 · Updated August 30, 2026';
   requestAnimationFrame(()=>requestAnimationFrame(()=>details.querySelector('.guide-opening-line')?.scrollIntoView({behavior:'smooth',block:'start'})));
 }
 function closeAppGuide(button){
@@ -634,7 +634,7 @@ function updateShotPlanner(green){
   const origin=shotPlannerOrigin(green),aim=shotPlannerAim(green),remainingPoints=remainingRoutePoints(origin,aim,green),toTarget=Math.round(distanceYards(origin,aim)),remaining=Math.round(routeDistance(remainingPoints)),routeTotal=toTarget+remaining;
   if(inlinePlannerMarker)inlinePlannerMarker.setLatLng(aim);if(inlinePlannerLines[0])inlinePlannerLines[0].setLatLngs([origin,aim]);if(inlinePlannerLines[1])inlinePlannerLines[1].setLatLngs(remainingPoints);
   if(inlinePlannerLabels[0])inlinePlannerLabels[0].setLatLng(pointBetween(origin,aim,.5));if(inlinePlannerLabels[1]&&remainingPoints[1])inlinePlannerLabels[1].setLatLng(pointBetween(remainingPoints[0],remainingPoints[1],.5));
-  const hit=$('plannerLineTargetYards'),left=$('plannerLineRemainingYards'),hitClub=$('plannerLineTargetClub'),goClub=$('plannerLineRemainingClub'),goLabel=$('plannerLineRemainingLabel'),yardage=$('centerYards'),label=$('yardageTargetLabel'),hitSuggestion=suggestedClubFor(toTarget,driverAllowedForCurrentShot()),goSuggestion=suggestedClubFor(remaining,false);if(hit)hit.textContent=toTarget;if(left)left.textContent=remaining;if(hitClub)hitClub.textContent=hitSuggestion?.club||'Set Clubs';if(goClub)goClub.textContent=goSuggestion?.club||'Set Clubs';if(goLabel)goLabel.classList.toggle('hidden',remaining<5);if(yardage)yardage.textContent=routeTotal;if(label)label.textContent='Route Remaining';
+  const hit=$('plannerLineTargetYards'),left=$('plannerLineRemainingYards'),hitClub=$('plannerLineTargetClub'),goClub=$('plannerLineRemainingClub'),goLabel=$('plannerLineRemainingLabel'),yardage=$('centerYards'),label=$('yardageTargetLabel'),hitSuggestion=suggestedClubFor(toTarget,driverAllowedForCurrentShot()),goSuggestion=suggestedClubFor(remaining,false),hitClubName=hitSuggestion?.club||'Set Clubs',goClubName=goSuggestion?.club||'Set Clubs';if(hit)hit.textContent=toTarget;if(left)left.textContent=remaining;if(hitClub)hitClub.textContent=hitClubName;if(goClub)goClub.textContent=goClubName;if(goLabel)goLabel.classList.toggle('hidden',remaining<5);inlinePlannerLabels[0]?.setPlannerContent?.(toTarget,hitClubName,true);inlinePlannerLabels[1]?.setPlannerContent?.(remaining,goClubName,remaining>=5);if(yardage)yardage.textContent=routeTotal;if(label)label.textContent='Route Remaining';
   if(golferIsNearHole(green))updateClubSuggestion(toTarget,lastGpsAccuracyYards??999)
 }
 function liveHoleMapPanel(green,h,p){
@@ -712,6 +712,15 @@ function googlePlannerIcon(){
   const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="58" height="58" viewBox="0 0 58 58"><circle cx="29" cy="29" r="25" fill="#d5ad51" stroke="#fff" stroke-width="4"/><circle cx="29" cy="29" r="15" fill="none" stroke="#173126" stroke-width="2"/><circle cx="29" cy="29" r="9" fill="none" stroke="#173126" stroke-width="2"/></svg>`;
   return{url:`data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,scaledSize:new google.maps.Size(58,58),anchor:new google.maps.Point(29,29)};
 }
+function googlePlannerLabelIcon(kind,yards='—',club='—'){
+  const width=116,height=78,label=kind==='hit'?'TO HIT':'TO GO',safeClub=String(club).replace(/[&<>"']/g,''),safeYards=String(yards).replace(/[^0-9—]/g,'');
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect x="1" y="1" width="114" height="76" rx="12" fill="#0c1410" fill-opacity=".9" stroke="#f5cf68" stroke-opacity=".65"/><text x="58" y="25" text-anchor="middle" fill="#f5cf68" font-family="Arial,sans-serif" font-size="22" font-weight="800">${safeYards}</text><text x="58" y="37" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="10" font-weight="800">yd</text><text x="58" y="49" text-anchor="middle" fill="#d6e1db" font-family="Arial,sans-serif" font-size="8" font-weight="800" letter-spacing="1">${label}</text><line x1="14" y1="56" x2="102" y2="56" stroke="#f5cf68" stroke-opacity=".72"/><text x="58" y="70" text-anchor="middle" fill="#a9efc9" font-family="Arial,sans-serif" font-size="11" font-weight="800">${safeClub}</text></svg>`;
+  return{url:`data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,size:new google.maps.Size(width,height),scaledSize:new google.maps.Size(width,height),anchor:new google.maps.Point(width+34,height/2)};
+}
+function googlePlannerLabelMarker(rawMap,position,kind){
+  const marker=new google.maps.Marker({map:rawMap,position:googlePoint(position),clickable:false,optimized:false,zIndex:1100,icon:googlePlannerLabelIcon(kind)});
+  return{raw:marker,setMap:value=>marker.setMap(value),setLatLng:point=>marker.setPosition(googlePoint(point)),setPlannerContent:(yards,club,visible=true)=>{marker.setVisible(visible);if(visible)marker.setIcon(googlePlannerLabelIcon(kind,yards,club))}};
+}
 function orientInlineHoleMap(green,origin=null,target=null){
   if(!inlineHoleMap||!selectedTee(green)||!green?.center)return;
   const segment=activeRouteSegment(null,green),start=origin||segment?.origin||selectedTee(green),end=target||segment?.target||green.center,container=$('liveHoleMap'),bearing=bearingDegrees(start,end);
@@ -780,9 +789,9 @@ function drawGoogleLiveHole(green){
     inlinePlannerLines=[googlePolylineFacade(hitLine),googlePolylineFacade(goLine)];
     const planner=rememberGoogleOverlay(new google.maps.Marker({map:rawMap,position:googlePoint(aim),draggable:true,keyboardShortcuts:false,zIndex:1200,icon:googlePlannerIcon(),title:'Drag to plan your shot'}));
     inlinePlannerMarker=googleMarkerFacade(planner);
-    const hitLabel=rememberGoogleOverlay(createGoogleHtmlOverlay(pointBetween(origin,aim,.5),'planner-line-label-marker hit-label','<span><b id="plannerLineTargetYards">—</b> yd<small>to hit</small><em id="plannerLineTargetClub">—</em></span>'));
-    const goLabel=rememberGoogleOverlay(createGoogleHtmlOverlay(pointBetween(remainingPoints[0],remainingPoints[1]||remainingPoints[0],.5),'planner-line-label-marker go-label','<span id="plannerLineRemainingLabel"><b id="plannerLineRemainingYards">—</b> yd<small>to go</small><em id="plannerLineRemainingClub">—</em></span>'));
-    hitLabel.setMap(rawMap);goLabel.setMap(rawMap);inlinePlannerLabels=[hitLabel,goLabel];
+    const hitLabel=rememberGoogleOverlay(googlePlannerLabelMarker(rawMap,pointBetween(origin,aim,.5),'hit'));
+    const goLabel=rememberGoogleOverlay(googlePlannerLabelMarker(rawMap,pointBetween(remainingPoints[0],remainingPoints[1]||remainingPoints[0],.5),'go'));
+    inlinePlannerLabels=[hitLabel,goLabel];
     planner.addListener('drag',()=>{const point=planner.getPosition();if(!point)return;shotPlannerAims[shotPlannerKey()]={lat:point.lat(),lng:point.lng()};updateShotPlanner(green)});
     planner.addListener('dragend',()=>{inlineUserMovedMap=true;$('mapRecenterButton')?.classList.remove('hidden')});
     fitLiveHoleView(green);updateShotPlanner(green);
