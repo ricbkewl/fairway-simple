@@ -1050,7 +1050,7 @@ function courseMatchesFilters(course){
   if(filters.recent&&!recent.includes(course.id))return false;
   if(filters.holes&&course.holes!==filters.holes)return false;
   if(filters.mapped&&mappedCount(course)!==course.holes)return false;
-  if(filters.par3&&!(course.pars||[]).length||filters.par3&&(course.pars||[]).some(par=>Number(par)!==3))return false;
+  if(filters.par3&&(!(course.pars||[]).length||(course.pars||[]).some(par=>Number(par)!==3)))return false;
   if(filters.difficulty&&difficulty!==filters.difficulty)return false;
   return true;
 }
