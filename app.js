@@ -89,7 +89,7 @@ function positionExpandedGuide(details){
   const headings=[...details.querySelectorAll('.guide-body > h3')],beforeHeading=headings.find(heading=>heading.textContent==='Before Your First Round'),installHeading=headings.find(heading=>heading.textContent==='Save It to Your Home Screen');
   const beforeList=beforeHeading?.nextElementSibling,installGuide=installHeading?.nextElementSibling,installTip=installGuide?.nextElementSibling;
   if(beforeList&&installHeading&&installGuide&&installTip)beforeList.after(installHeading,installGuide,installTip);
-  const update=details.querySelector('.guide-update');if(update)update.textContent='Current feature guide · Version 86 · Updated August 30, 2026';
+  const update=details.querySelector('.guide-update');if(update)update.textContent='Current feature guide · Version 87 · Updated August 30, 2026';
   requestAnimationFrame(()=>requestAnimationFrame(()=>details.querySelector('.guide-opening-line')?.scrollIntoView({behavior:'smooth',block:'start'})));
 }
 function closeAppGuide(button){
@@ -646,6 +646,7 @@ function round(){
   if(s.done){s.v='recap';recap();return}
   ensureCurrentHolePar();const h=s.hole,p=s.pars[h-1],c=courseById(s.courseId),green=c?.greens?.[h-1];app.classList.add('round-fullscreen');
   app.innerHTML=green?liveHoleMapPanel(green,h,p):`<section class="live-hole-map missing-hole-map"><b>Hole map unavailable</b><span>An administrator needs to map Hole ${h}.</span></section>`;
+  const summary=document.querySelector('.round-map-summary');if(summary&&c){const strip=document.createElement('div');strip.className='round-course-name-strip';strip.textContent=c.name;summary.after(strip)}
   updateSyncIndicator();if(green){initInlineHoleMap(green);const segment=activeRouteSegment(null,green);if(segment)loadWeather(segment.origin,segment.target,segment.origin);startLocation(green)}
 }
 function yardagePanel(){return`<section class="gps-card"><div class="gps-signal-row top-gps-signal gps-compact-row"><div class="gps-accuracy"><b>GPS</b><div id="gpsStatus" class="small muted">Locating…</div></div><div class="hole-yardage-compact"><small id="yardageTargetLabel">Yards to Hole</small><b id="centerYards">–</b><em>yd</em></div><div class="top-weather-compact"><span id="currentWeatherIcon">◌</span><div><b id="currentTemperature">—°</b><small id="currentWeatherLabel">Loading</small></div></div></div><div class="club-suggestion featured-club"><div class="club-recommendation-copy"><small>Suggested Club</small><b id="clubSuggestion">—</b><span id="clubSuggestionNote">Waiting for an accurate GPS signal</span></div></div><button class="club-refresh-button" onclick="refreshLocation()">↻ Refresh GPS</button></section>`}
@@ -678,18 +679,25 @@ function googleMarkerFacade(marker){return{raw:marker,setLatLng(point){marker.se
 function googlePolylineFacade(line){return{raw:line,setLatLngs(points){line.setPath(points.map(googlePoint))},setMap(value){line.setMap(value)}}}
 function createGoogleHtmlOverlay(position,className,html){
   class AtgOverlay extends google.maps.OverlayView{
-    constructor(){super();this.position=googlePoint(position);this.div=document.createElement('div');this.div.className=className;this.div.innerHTML=html;this.div.style.position='absolute';this.div.style.pointerEvents='none'}
+    constructor(){super();this.position=googlePoint(position);this.div=document.createElement('div');this.div.className=`${className} google-planner-label`;this.div.innerHTML=html;this.div.style.position='absolute';this.div.style.pointerEvents='none'}
     onAdd(){this.getPanes().overlayMouseTarget.appendChild(this.div)}
     draw(){
       const projection=this.getProjection();if(!projection)return;const point=projection.fromLatLngToDivPixel(this.position);if(!point)return;
-      const mapDiv=this.getMap()?.getDiv(),label=this.div.firstElementChild,width=label?.offsetWidth||96,height=label?.offsetHeight||70,mapWidth=mapDiv?.clientWidth||window.innerWidth,mapHeight=mapDiv?.clientHeight||window.innerHeight;
-      const left=Math.min(Math.max(point.x,width+52),Math.max(width+52,mapWidth-18)),minTop=205+height/2,maxTop=Math.max(minTop,mapHeight-92-height/2),laneOffset=className.includes('hit-label')?-46:className.includes('go-label')?46:0,top=Math.min(Math.max(point.y+laneOffset,minTop),maxTop);
-      this.div.style.left=`${left}px`;this.div.style.top=`${top}px`;
+      const mapDiv=this.getMap()?.getDiv(),label=this.div.firstElementChild,width=label?.offsetWidth||96,height=label?.offsetHeight||70,mapWidth=mapDiv?.clientWidth||window.innerWidth,mapHeight=mapDiv?.clientHeight||window.innerHeight,minTop=205,maxTop=Math.max(minTop,mapHeight-92-height);
+      const left=Math.min(Math.max(point.x-width-34,10),Math.max(10,mapWidth-width-10)),laneOffset=className.includes('hit-label')?-(height/2+8):(height/2+8),top=Math.min(Math.max(point.y-height/2+laneOffset,minTop),maxTop);
+      this.div.style.width=`${width}px`;this.div.style.height=`${height}px`;this.div.style.left=`${left}px`;this.div.style.top=`${top}px`;
+      requestAnimationFrame(()=>resolveGooglePlannerLabelCollision(mapDiv));
     }
     onRemove(){this.div.remove()}
     setLatLng(point){this.position=googlePoint(point);if(this.getProjection())this.draw()}
   }
   const overlay=new AtgOverlay();return overlay;
+}
+function resolveGooglePlannerLabelCollision(mapDiv){
+  if(!mapDiv)return;const hit=mapDiv.querySelector('.google-planner-label.hit-label'),go=mapDiv.querySelector('.google-planner-label.go-label');if(!hit||!go||go.firstElementChild?.classList.contains('hidden'))return;
+  const a=hit.getBoundingClientRect(),b=go.getBoundingClientRect(),overlapX=Math.min(a.right,b.right)-Math.max(a.left,b.left),overlapY=Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top);if(overlapX<=0||overlapY<=0)return;
+  const gap=10,limit=mapDiv.clientHeight-92-go.offsetHeight,currentGo=parseFloat(go.style.top)||0,nextGo=currentGo+overlapY+gap;if(nextGo<=limit){go.style.top=`${nextGo}px`;return}
+  hit.style.top=`${Math.max(205,(parseFloat(hit.style.top)||205)-overlapY-gap)}px`;
 }
 function rememberGoogleOverlay(overlay){inlineGoogleOverlays.push(overlay);return overlay}
 function clearInlineGoogleOverlays(){
