@@ -5,6 +5,7 @@ const SUPABASE_URL = 'https://rntmqjqbmjfcpwbbflyz.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_r6fBc5CmRwlyLhTnk7u6BA_rRA1Pmoj';
 const APP_URL = 'https://ricbkewl.github.io/fairway-simple/';
 const GOOGLE_MAPS_API_KEY = 'AIzaSyB1RJ8SmBPQvn-P-HXpNJ26D_Ue8Oge3Wc';
+const GOOGLE_MAP_ID = 'c27152898adbf111a2dbd048';
 const MAPTILER_API_KEY = 'PpgeIcwg8NbSQTMZm4wr';
 const WEATHER_CACHE_MS = 10*60*1000;
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY,{
@@ -737,7 +738,7 @@ async function initInlineHoleMap(green){
   try{
     await loadGoogleMaps();if($('liveHoleMap')!==container||shotPlannerKey()!==key)return;
     document.querySelector('.live-map-viewport')?.classList.add('google-map-active');
-    const rawMap=new google.maps.Map(container,{center:googlePoint(green.center),zoom:17,mapTypeId:liveMapStyle==='satellite'?'satellite':'roadmap',disableDefaultUI:true,clickableIcons:false,gestureHandling:'greedy',keyboardShortcuts:false,headingInteractionEnabled:true,tiltInteractionEnabled:true,backgroundColor:'#173c2b'});
+    const rawMap=new google.maps.Map(container,{center:googlePoint(green.center),zoom:17,mapId:GOOGLE_MAP_ID,mapTypeId:liveMapStyle==='satellite'?'satellite':'roadmap',disableDefaultUI:true,clickableIcons:false,gestureHandling:'greedy',keyboardShortcuts:false,headingInteractionEnabled:true,tiltInteractionEnabled:true,backgroundColor:'#173c2b'});
     inlineHoleMap=googleMapFacade(rawMap,container);const label=document.querySelector('.forward-label');if(label)label.textContent='GOOGLE MAPS · FAIRWAY ROUTE · FORWARD';drawGoogleLiveHole(green);
     setTimeout(()=>{if(inlineHoleMap?.raw!==rawMap)return;rawMap.addListener('dragstart',showMapRecenterButton);rawMap.addListener('zoom_changed',showMapRecenterButton);rawMap.addListener('heading_changed',showMapRecenterButton);rawMap.addListener('tilt_changed',showMapRecenterButton)},650);
   }catch(error){
@@ -991,7 +992,7 @@ async function initMap(){
   try{
     await loadGoogleMaps();if($('courseMap')!==container||!draft)return;
     const g=draft.greens[draft.mapHole-1],existing=g[draft.target],any=g.center||g.aim1||g.aim2||g.tee||g.front||g.back,view=draft.mapView||existing||any||{lat:34.1,lng:-117.3},zoom=draft.mapView?.zoom??(existing||any?18:10);
-    const rawMap=new google.maps.Map(container,{center:googlePoint(view),zoom,mapTypeId:draft.mapStyle==='satellite'?'satellite':'roadmap',mapTypeControl:false,streetViewControl:false,fullscreenControl:false,gestureHandling:'greedy',clickableIcons:false,headingInteractionEnabled:true,tiltInteractionEnabled:true});map=googleMapFacade(rawMap,container);
+    const rawMap=new google.maps.Map(container,{center:googlePoint(view),zoom,mapId:GOOGLE_MAP_ID,mapTypeId:draft.mapStyle==='satellite'?'satellite':'roadmap',mapTypeControl:false,streetViewControl:false,fullscreenControl:false,gestureHandling:'greedy',clickableIcons:false,headingInteractionEnabled:true,tiltInteractionEnabled:true});map=googleMapFacade(rawMap,container);
     const colors={tee:'#d8a93e',aim1:'#c68b2c',aim2:'#9b6c22',front:'#f4a340',center:'#176b45',back:'#174f9c'},route=holeRoute(g);if(route.length>1)new google.maps.Polyline({map:rawMap,path:route.map(googlePoint),strokeColor:'#d29f31',strokeWeight:4,strokeOpacity:.9});
     for(const [key,point] of Object.entries(g))if(point)new google.maps.Marker({map:rawMap,position:googlePoint(point),title:markerName(key),icon:{path:google.maps.SymbolPath.CIRCLE,scale:8,fillColor:colors[key]||'#174f9c',fillOpacity:.95,strokeColor:'#fff',strokeWeight:2}});
     rawMap.addListener('click',event=>{const point=event.latLng;if(!point)return;draft.greens[draft.mapHole-1][draft.target]={lat:point.lat(),lng:point.lng()};render()});
