@@ -30,14 +30,20 @@ const EAGLE_GLEN_DRAFT_POINTS = [
 ];
 const EAGLE_GLEN_PARS=[4,4,5,3,5,4,4,3,4,3,4,5,4,4,4,4,3,5];
 const EAGLE_GLEN_TEE_YARDS={black:[416,311,549,187,551,360,369,172,396,202,398,645,341,441,476,380,164,540],blue:[385,305,525,174,536,329,352,153,357,152,342,581,315,406,395,364,143,465],white:[361,270,493,155,457,302,336,145,267,98,310,511,282,361,375,280,138,411],red:[327,225,447,130,421,262,285,79,252,83,281,452,262,326,326,236,115,388]};
+const REVIEW_TEE_OFFSETS={
+  'a230fad3-22db-48e1-be1a-e11c0e92cf11':{name:'Laguna Woods Golf Club',blue:0,white:20,red:42},
+  'df4efa6f-64da-4a01-bba8-05be8160ea23':{name:'River View Golf Course',blue:0,white:23,red:47},
+  '0a4f8d85-153e-421e-8b4a-1dedee34e724':{name:'Sierra Lakes Golf Club',black:0,blue:21,white:40,red:82}
+};
 const WEATHER_CACHE_MS = 10*60*1000;
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY,{
   auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:window.localStorage}
 });
 const CLUBS=['Driver','3 Wood','5 Wood','7 Wood','2 Hybrid','3 Hybrid','4 Hybrid','5 Hybrid','2 Iron','3 Iron','4 Iron','5 Iron','6 Iron','7 Iron','8 Iron','9 Iron','Pitching Wedge','Gap Wedge','Sand Wedge','Lob Wedge'];
-const roundDefault = {v:'home',course:'',courseId:null,holes:18,players:[''],pars:[],scores:{},putts:{},hole:1,done:false,resumeView:null,ownerUserId:null,createdBy:null};
+const roundDefault = {v:'home',course:'',courseId:null,holes:18,players:[''],pars:[],scores:{},putts:{},hole:1,teeSet:'black',done:false,resumeView:null,ownerUserId:null,createdBy:null};
 let s = JSON.parse(localStorage.atgRound || 'null') || roundDefault;
 if(!s.putts)s.putts={};
+if(!s.teeSet)s.teeSet='black';
 if(s.players?.length===1&&s.players[0]==='You'&&['home','setup'].includes(s.v))s.players=[''];
 let courses = JSON.parse(localStorage.atgCourses||'[]');
 let currentUser = null;
@@ -83,7 +89,7 @@ function positionExpandedGuide(details){
   const headings=[...details.querySelectorAll('.guide-body > h3')],beforeHeading=headings.find(heading=>heading.textContent==='Before Your First Round'),installHeading=headings.find(heading=>heading.textContent==='Save It to Your Home Screen');
   const beforeList=beforeHeading?.nextElementSibling,installGuide=installHeading?.nextElementSibling,installTip=installGuide?.nextElementSibling;
   if(beforeList&&installHeading&&installGuide&&installTip)beforeList.after(installHeading,installGuide,installTip);
-  const update=details.querySelector('.guide-update');if(update)update.textContent='Current feature guide · Version 85 · Updated August 30, 2026';
+  const update=details.querySelector('.guide-update');if(update)update.textContent='Current feature guide · Version 86 · Updated August 30, 2026';
   requestAnimationFrame(()=>requestAnimationFrame(()=>details.querySelector('.guide-opening-line')?.scrollIntoView({behavior:'smooth',block:'start'})));
 }
 function closeAppGuide(button){
@@ -111,8 +117,16 @@ function bottomNav(){if(s.v==='round'){roundBottomNav();return}app.insertAdjacen
 function closeRoundQuickMenu(){document.querySelector('.round-quick-overlay')?.remove()}
 function showRoundQuickMenu(){
   closeRoundQuickMenu();const overlay=document.createElement('div');overlay.className='round-quick-overlay';overlay.onclick=event=>{if(event.target===overlay)closeRoundQuickMenu()};
-  overlay.innerHTML=`<section class="round-quick-menu"><div><b>Round Menu</b><button onclick="closeRoundQuickMenu()" aria-label="Close menu">×</button></div><button onclick="closeRoundQuickMenu();goHome()"><span>⌂</span>Home</button><button onclick="closeRoundQuickMenu();openCurrentRound()"><span>🏌</span>Round</button><button onclick="closeRoundQuickMenu();openCoursesFromNav()"><span>⛳</span>${adminRole==='super_admin'?'Courses/Players':'Courses'}</button><button onclick="closeRoundQuickMenu();accountAction()"><span>●</span>Account</button></section>`;document.body.appendChild(overlay)
+  overlay.innerHTML=`<section class="round-quick-menu"><div><b>Round Menu</b><button onclick="closeRoundQuickMenu()" aria-label="Close menu">×</button></div><button onclick="closeRoundQuickMenu();showTeePicker()"><span>◉</span>Playing Tee · ${esc(teeSetLabel())}</button><button onclick="closeRoundQuickMenu();goHome()"><span>⌂</span>Home</button><button onclick="closeRoundQuickMenu();openCurrentRound()"><span>🏌</span>Round</button><button onclick="closeRoundQuickMenu();openCoursesFromNav()"><span>⛳</span>${adminRole==='super_admin'?'Courses/Players':'Courses'}</button><button onclick="closeRoundQuickMenu();accountAction()"><span>●</span>Account</button></section>`;document.body.appendChild(overlay)
 }
+function teeSetLabel(value=s.teeSet){return({black:'Black Tee',blue:'Blue Tee',white:'White Tee',red:'Red Tee'})[value]||'Black Tee'}
+function selectedTee(green){return green?.tees?.[s.teeSet]||green?.tees?.black||green?.tee||null}
+function availableTeeSets(){const course=courseById(s.courseId),sets=new Set();for(const green of course?.greens||[])for(const color of ['black','blue','white','red'])if(green?.tees?.[color])sets.add(color);return sets.size?[...sets]:['black']}
+function showTeePicker(){
+  document.querySelector('.tee-picker-overlay')?.remove();const sets=availableTeeSets(),overlay=document.createElement('div');overlay.className='tee-picker-overlay';overlay.onclick=event=>{if(event.target===overlay)overlay.remove()};
+  overlay.innerHTML=`<section class="tee-picker"><div><span><small>PLAYING TEE</small><b>Choose your tee</b></span><button onclick="this.closest('.tee-picker-overlay').remove()" aria-label="Close tee selection">×</button></div><p>This changes the map and yardage for you only. Other golfers can choose their own tee.</p>${sets.map(color=>`<button class="tee-choice ${s.teeSet===color?'on':''}" onclick="setRoundTee('${color}')"><i class="tee-choice-dot ${color}"></i><span><b>${teeSetLabel(color)}</b><small>${color==='black'?'Back / championship':color==='blue'?'Back / experienced':color==='white'?'Middle / standard':'Forward'}</small></span><em>${s.teeSet===color?'Selected':'Choose'}</em></button>`).join('')}${sets.length===1&&!courseById(s.courseId)?.greens?.some(g=>g?.tees)?'<div class="notice">This course currently has one reviewed reference tee. More tee choices will appear after its mapping is approved.</div>':''}</section>`;document.body.appendChild(overlay)
+}
+function setRoundTee(color){if(!availableTeeSets().includes(color))return;s.teeSet=color;for(const key of Object.keys(shotPlannerAims))delete shotPlannerAims[key];document.querySelector('.tee-picker-overlay')?.remove();save();showRoundHole()}
 function rememberRoundView(){if(['setup','pars','round','recap'].includes(s.v)&&!s.done)s.resumeView=s.v}
 function goHome(){rememberRoundView();s.v='home';render()}
 async function resumeRound(){if(s.sharedRoundId)await loadSharedRound(false);s.v=s.done?'recap':(s.resumeView||'round');render()}
@@ -180,9 +194,9 @@ async function saveClubDistances(){
 }
 function driverAllowedForCurrentShot(){
   const green=courseById(s.courseId)?.greens?.[s.hole-1];
-  if(!lastKnownPosition||!green?.tee||!golferIsNearHole(green))return true;
+  if(!lastKnownPosition||!selectedTee(green)||!golferIsNearHole(green))return true;
   const teeBuffer=Math.max(35,Math.min(60,(lastGpsAccuracyYards||0)+15));
-  return distanceYards(lastKnownPosition,green.tee)<=teeBuffer;
+  return distanceYards(lastKnownPosition,selectedTee(green))<=teeBuffer;
 }
 function suggestedClubFor(yards,allowDriver=driverAllowedForCurrentShot()){
   if(!Number.isFinite(yards))return null;
@@ -309,7 +323,7 @@ async function promoteCourseAdmin(){
 }
 async function start(){if(!currentUser){alert('Each golfer needs an account so scores can be protected. Please sign in or create an account first.');await signInAccount();if(!currentUser)return}if(s.resumeView&&!s.done&&!confirm('Start a new round? Your unfinished round will be replaced.'))return;const playerName=golferProfile?.first_name?.trim()||'';s={...roundDefault,v:'setup',players:[playerName],scores:{},putts:{},pars:[],resumeView:'setup',sharedRoundId:null,joinCode:null,ownerUserId:currentUser.id};render()}
 function setup(){const options=courses.map(c=>`<option value="${esc(c.id)}" ${s.courseId===c.id?'selected':''}>${esc(c.name)} (${c.holes} holes)</option>`).join('');app.innerHTML=`<button class="back" onclick="goHome()">← Back</button><h1>Create a Round</h1><p class="muted">Choose a saved course to start immediately, or create a custom scorecard.</p><label>Saved course</label><select id="savedCourse" onchange="chooseCourse(this.value)"><option value="">Custom scorecard without GPS</option>${options}</select>${s.courseId?`<div class="notice">The saved GPS markers and hole pars will be used automatically.</div>`:`<label>Course name</label><input id="course" value="${esc(s.course)}" placeholder="e.g., Oak Valley Golf Club"><label>How many holes?</label><div class="row"><button class="choice ${s.holes===9?'on':''}" onclick="setHoles(9)">9 Holes</button><button class="choice ${s.holes===18?'on':''}" onclick="setHoles(18)">18 Holes</button></div>`}<label>Your name for this round</label><input aria-label="Your name for this round" value="${esc(s.players[0]||'')}" placeholder="Enter your name" oninput="updatePlayer(0,this.value)"><div class="notice">Your profile first name is entered automatically, but you can edit it. Other golfers join from their own phones.</div><button id="${s.courseId?'createRoundButton':'setupContinueButton'}" class="primary" onclick="goPars()">${s.courseId?'Create Protected Round':'Continue'}</button>`}
-function chooseCourse(id){const c=courseById(id);if(c){s.courseId=c.id;s.course=c.name;s.holes=c.holes;s.pars=[...c.pars]}else{s.courseId=null;s.course='';s.pars=[]}render()}
+function chooseCourse(id){const c=courseById(id);if(c){s.courseId=c.id;s.course=c.name;s.holes=c.holes;s.pars=[...c.pars];s.teeSet='black'}else{s.courseId=null;s.course='';s.pars=[];s.teeSet='black'}render()}
 function setHoles(n){s.holes=n;render()}
 function addPlayer(){const n=$('name').value.trim();if(n&&!s.players.includes(n)){s.players.push(n);render()}}
 function updatePlayer(i,name){s.players[i]=name;save()}
@@ -595,13 +609,13 @@ function ensureCurrentHolePar(){
   const item={round_id:s.sharedRoundId,user_id:currentUser.id,hole:s.hole,strokes:par,updated_at:new Date().toISOString()};
   pendingScores[pendingScoreKey(item)]=item;persistPendingScores();syncPendingScores();
 }
-function holeRoute(green){return[green?.tee,green?.aim1,green?.aim2,green?.center].filter(Boolean)}
+function holeRoute(green){return[selectedTee(green),green?.aim1,green?.aim2,green?.center].filter(Boolean)}
 function mappedHoleDistance(green){const route=holeRoute(green);if(route.length<2)return null;return Math.round(route.slice(1).reduce((sum,point,index)=>sum+distanceYards(route[index],point),0))}
 function routeProjection(point,start,end){const latScale=Math.cos((start.lat+end.lat)*Math.PI/360),ax=start.lng*latScale,ay=start.lat,bx=end.lng*latScale,by=end.lat,px=point.lng*latScale,py=point.lat,dx=bx-ax,dy=by-ay,length=dx*dx+dy*dy;return length?((px-ax)*dx+(py-ay)*dy)/length:1}
 function activeRouteSegment(here,green){const route=holeRoute(green);if(route.length<2)return null;if(!here)return{origin:route[0],target:route[1],index:1,isGreen:route[1]===green.center};for(let i=1;i<route.length;i++){const target=route[i],isLast=i===route.length-1,close=distanceYards(here,target)<45,passed=routeProjection(here,route[i-1],target)>.88;if(isLast||(!close&&!passed))return{origin:route[i-1],target,index:i,isGreen:target===green.center}}return{origin:route.at(-2),target:route.at(-1),index:route.length-1,isGreen:true}}
-function shotPlannerKey(){return`${s.courseId||s.course}:${s.hole}`}
+function shotPlannerKey(){return`${s.courseId||s.course}:${s.hole}:${s.teeSet||'black'}`}
 function golferIsNearHole(green){return Boolean(lastKnownPosition&&green?.center&&distanceYards(lastKnownPosition,green.center)<=3000)}
-function shotPlannerOrigin(green){return golferIsNearHole(green)?lastKnownPosition:green.tee}
+function shotPlannerOrigin(green){return golferIsNearHole(green)?lastKnownPosition:selectedTee(green)}
 function pointBetween(start,end,ratio=.5){return{lat:start.lat+(end.lat-start.lat)*ratio,lng:start.lng+(end.lng-start.lng)*ratio}}
 function routeDistance(points){return points.slice(1).reduce((sum,point,index)=>sum+distanceYards(points[index],point),0)}
 function remainingRoutePoints(origin,aim,green){const route=holeRoute(green),segment=activeRouteSegment(origin,green);let tail=segment?route.slice(segment.index+1):[];if(!tail.length||tail.at(-1)!==green.center)tail=[...tail,green.center];return[aim,...tail]}
@@ -610,13 +624,13 @@ function defaultShotPlannerAim(green){
   const near=golferIsNearHole(green),here=near?lastKnownPosition:null,segment=activeRouteSegment(here,green);if(!segment)return green.center;
   if(!segment.isGreen)return segment.target;
   if(green.aim1||green.aim2)return green.center;
-  const fullDistance=distanceYards(green.tee,green.center);if(fullDistance<=260)return green.center;
-  const midpoint=pointBetween(green.tee,green.center,.5);if(here&&(distanceYards(here,midpoint)<40||routeProjection(here,green.tee,midpoint)>.92))return green.center;
+  const tee=selectedTee(green),fullDistance=distanceYards(tee,green.center);if(fullDistance<=260)return green.center;
+  const midpoint=pointBetween(tee,green.center,.5);if(here&&(distanceYards(here,midpoint)<40||routeProjection(here,tee,midpoint)>.92))return green.center;
   return midpoint;
 }
 function shotPlannerAim(green){const key=shotPlannerKey(),custom=shotPlannerAims[key];if(custom&&golferIsNearHole(green)&&distanceYards(lastKnownPosition,custom)<35)delete shotPlannerAims[key];return shotPlannerAims[key]||defaultShotPlannerAim(green)}
 function updateShotPlanner(green){
-  if(!green?.tee||!green?.center)return;
+  if(!selectedTee(green)||!green?.center)return;
   const origin=shotPlannerOrigin(green),aim=shotPlannerAim(green),remainingPoints=remainingRoutePoints(origin,aim,green),toTarget=Math.round(distanceYards(origin,aim)),remaining=Math.round(routeDistance(remainingPoints)),routeTotal=toTarget+remaining;
   if(inlinePlannerMarker)inlinePlannerMarker.setLatLng(aim);if(inlinePlannerLines[0])inlinePlannerLines[0].setLatLngs([origin,aim]);if(inlinePlannerLines[1])inlinePlannerLines[1].setLatLngs(remainingPoints);
   if(inlinePlannerLabels[0])inlinePlannerLabels[0].setLatLng(pointBetween(origin,aim,.5));if(inlinePlannerLabels[1]&&remainingPoints[1])inlinePlannerLabels[1].setLatLng(pointBetween(remainingPoints[0],remainingPoints[1],.5));
@@ -624,7 +638,7 @@ function updateShotPlanner(green){
   if(golferIsNearHole(green))updateClubSuggestion(toTarget,lastGpsAccuracyYards??999)
 }
 function liveHoleMapPanel(green,h,p){
-  if(!green?.tee||!green?.center)return`<section class="live-hole-map missing-hole-map"><b>Hole map unavailable</b><span>An administrator needs to map the tee and center green for Hole ${h}.</span></section>`;
+  if(!selectedTee(green)||!green?.center)return`<section class="live-hole-map missing-hole-map"><b>Hole map unavailable</b><span>An administrator needs to map the tee and center green for Hole ${h}.</span></section>`;
   const yards=mappedHoleDistance(green);
   return`<section class="live-hole-map planner-on"><div class="live-map-viewport"><div id="liveHoleMap" aria-label="Forward-facing course view of Hole ${h}"></div></div><div class="hole-map-summary round-map-summary"><div><small>HOLE</small><b id="roundMapHole">${h}</b></div><div class="hole-distance-summary"><small>DISTANCE</small><b><span id="roundMapDistance">${yards}</span> <i>YDS</i></b></div><div><small>PAR</small><b id="roundMapPar">${p}</b></div><div class="route-remaining-summary"><small>ROUTE REMAINING</small><b><span id="centerYards">${yards}</span> <i>YDS</i></b><span id="yardageTargetLabel" class="visually-hidden">Route Remaining</span></div><div class="round-qr-summary"><button onclick="showRoundQr()" aria-label="Show QR code for the current round" title="Show current round QR code"><img src="icon-192.png" alt="ATG"></button></div></div><div id="gpsStatus" class="visually-hidden">Locating…</div><button id="mapRecenterButton" class="map-recenter-button hidden" onclick="resetLiveHoleView()" aria-label="Restore the complete hole view" title="Restore hole view"><span></span></button><div class="live-map-style-toggle" aria-label="Map style"><button class="${liveMapStyle==='street'?'on':''}" onclick="setLiveMapStyle('street')">Map</button><button class="${liveMapStyle==='satellite'?'on':''}" onclick="setLiveMapStyle('satellite')">Satellite</button></div><div class="hole-edge-navigation" aria-label="Change hole"><button class="hole-edge-arrow previous" onclick="prev()" aria-label="Previous hole" ${h===1?'disabled':''}>‹</button><button class="hole-edge-arrow next" onclick="next()" aria-label="Next hole">›</button></div><div class="forward-label">GOOGLE MAPS · SHOT PLANNER · FORWARD</div><div class="map-wind-card"><div class="map-weather-temperature"><span id="mapWeatherIcon">◌</span><b id="mapTemperature">—°</b></div><small>WIND</small><span id="mapWindArrow" class="map-wind-arrow">↑</span><b id="mapWindSpeed">—</b><em id="mapWindLabel">Loading</em></div><div class="map-zoom-controls" aria-label="Map zoom controls"><button onclick="zoomLiveHoleMap(1)" aria-label="Zoom map in">+</button><button onclick="zoomLiveHoleMap(-1)" aria-label="Zoom map out">−</button></div><div class="hole-map-legend inline-legend"><span><i class="tee-dot"></i>Tee</span><span><i class="aim-dot"></i>Aim</span><span><i class="golfer-dot"></i>You</span><span><i class="green-dot"></i>Green</span></div></section>`;
 }
@@ -669,7 +683,7 @@ function createGoogleHtmlOverlay(position,className,html){
     draw(){
       const projection=this.getProjection();if(!projection)return;const point=projection.fromLatLngToDivPixel(this.position);if(!point)return;
       const mapDiv=this.getMap()?.getDiv(),label=this.div.firstElementChild,width=label?.offsetWidth||96,height=label?.offsetHeight||70,mapWidth=mapDiv?.clientWidth||window.innerWidth,mapHeight=mapDiv?.clientHeight||window.innerHeight;
-      const left=Math.min(Math.max(point.x,width+52),Math.max(width+52,mapWidth-18)),top=Math.min(Math.max(point.y,205+height/2),Math.max(205+height/2,mapHeight-92-height/2));
+      const left=Math.min(Math.max(point.x,width+52),Math.max(width+52,mapWidth-18)),minTop=205+height/2,maxTop=Math.max(minTop,mapHeight-92-height/2),laneOffset=className.includes('hit-label')?-46:className.includes('go-label')?46:0,top=Math.min(Math.max(point.y+laneOffset,minTop),maxTop);
       this.div.style.left=`${left}px`;this.div.style.top=`${top}px`;
     }
     onRemove(){this.div.remove()}
@@ -691,8 +705,8 @@ function googlePlannerIcon(){
   return{url:`data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,scaledSize:new google.maps.Size(58,58),anchor:new google.maps.Point(29,29)};
 }
 function orientInlineHoleMap(green,origin=null,target=null){
-  if(!inlineHoleMap||!green?.tee||!green?.center)return;
-  const segment=activeRouteSegment(null,green),start=origin||segment?.origin||green.tee,end=target||segment?.target||green.center,container=$('liveHoleMap'),bearing=bearingDegrees(start,end);
+  if(!inlineHoleMap||!selectedTee(green)||!green?.center)return;
+  const segment=activeRouteSegment(null,green),start=origin||segment?.origin||selectedTee(green),end=target||segment?.target||green.center,container=$('liveHoleMap'),bearing=bearingDegrees(start,end);
   if(inlineHoleMap.provider==='google'){
     if(container){container.dataset.forwardBearing=String(bearing);container.style.setProperty('--map-bearing','0deg');container.style.transform='none'}
     if(!inlineUserMovedMap||inlineViewResetting)inlineHoleMap.raw.moveCamera({heading:bearing,tilt:inlineHoleMap.raw.getTilt()||0});
@@ -703,7 +717,7 @@ function orientInlineHoleMap(green,origin=null,target=null){
 function zoomLiveHoleMap(change){if(!inlineHoleMap)return;inlineHoleMap.setZoom(inlineHoleMap.getZoom()+change,{animate:true})}
 function showMapRecenterButton(){if(!inlineViewResetting){inlineUserMovedMap=true;$('mapRecenterButton')?.classList.remove('hidden')}}
 function fitLiveHoleView(green){
-  if(!inlineHoleMap||!green?.tee||!green?.center)return;
+  if(!inlineHoleMap||!selectedTee(green)||!green?.center)return;
   inlineViewResetting=true;inlineUserMovedMap=false;inlineHoleGreen=green;$('mapRecenterButton')?.classList.add('hidden');
   const points=[...holeRoute(green),green.front,green.back].filter(Boolean);
   if(inlineHoleMap.provider==='google'){
@@ -733,13 +747,13 @@ function enableForwardMapDragging(){
   const end=event=>{pointers.delete(event.pointerId);resetRemaining()};viewport.addEventListener('pointerup',end);viewport.addEventListener('pointercancel',end);
 }
 function initInlineHoleMapLeaflet(green){
-  const container=$('liveHoleMap');if(!container||!green?.tee||!green?.center||!window.L)return;
+  const container=$('liveHoleMap');if(!container||!selectedTee(green)||!green?.center||!window.L)return;
   inlineHoleMap=L.map(container,{zoomControl:false,zoomSnap:.25,dragging:false,scrollWheelZoom:false,doubleClickZoom:'center',boxZoom:false,keyboard:false,touchZoom:'center',attributionControl:false});
   inlineHoleGreen=green;
   const useStreetAttribution=(fallback=false)=>{const label=document.querySelector('.forward-label'),credit=document.querySelector('.hole-map-attribution');if(label)label.textContent=fallback?'SATELLITE UNAVAILABLE · MAP VIEW · FORWARD':'MAP VIEW · FAIRWAY ROUTE · FORWARD';if(credit){credit.textContent='© OpenStreetMap';credit.href='https://www.openstreetmap.org/copyright/'}};
   if(liveMapStyle==='satellite'&&MAPTILER_API_KEY)addSatelliteLayer(inlineHoleMap,()=>useStreetAttribution(true));else{addStreetLayer(inlineHoleMap);useStreetAttribution(false)}
   fitLiveHoleView(green);
-  L.circleMarker(green.tee,{radius:9,color:'#fff',weight:3,fillColor:'#d8a93e',fillOpacity:1}).addTo(inlineHoleMap);
+  L.circleMarker(selectedTee(green),{radius:9,color:'#fff',weight:3,fillColor:'#d8a93e',fillOpacity:1}).addTo(inlineHoleMap);
   for(const aim of[green.aim1,green.aim2].filter(Boolean))L.circleMarker(aim,{radius:8,color:'#fff',weight:3,fillColor:'#e0bd66',fillOpacity:1}).addTo(inlineHoleMap);
   L.circleMarker(green.center,{radius:10,color:'#fff',weight:3,fillColor:'#176b45',fillOpacity:1}).addTo(inlineHoleMap);
   shotPlannerGreen=green;const origin=shotPlannerOrigin(green),aim=shotPlannerAim(green),remainingPoints=remainingRoutePoints(origin,aim,green),icon=L.divIcon({className:'shot-planner-marker',html:'<span>◎</span>',iconSize:[42,42],iconAnchor:[21,21]}),hitLabel=L.divIcon({className:'planner-line-label-marker hit-label',html:'<span><b id="plannerLineTargetYards">—</b> yd<small>to hit</small><em id="plannerLineTargetClub">—</em></span>',iconSize:[1,1],iconAnchor:[0,0]}),goLabel=L.divIcon({className:'planner-line-label-marker go-label',html:'<span id="plannerLineRemainingLabel"><b id="plannerLineRemainingYards">—</b> yd<small>to go</small><em id="plannerLineRemainingClub">—</em></span>',iconSize:[1,1],iconAnchor:[0,0]});
@@ -749,7 +763,7 @@ function initInlineHoleMapLeaflet(green){
 }
 function drawGoogleLiveHole(green){
     const rawMap=inlineHoleMap.raw;inlineHoleGreen=green;clearInlineGoogleOverlays();
-    googleCircleMarker(rawMap,green.tee,'#d8a93e',9,'Tee');
+    googleCircleMarker(rawMap,selectedTee(green),'#d8a93e',9,teeSetLabel());
     for(const [index,aimPoint] of[green.aim1,green.aim2].filter(Boolean).entries())googleCircleMarker(rawMap,aimPoint,'#e0bd66',8,`Aim ${index+1}`);
     googleCircleMarker(rawMap,green.center,'#176b45',10,'Green center');
     shotPlannerGreen=green;const origin=shotPlannerOrigin(green),aim=shotPlannerAim(green),remainingPoints=remainingRoutePoints(origin,aim,green);
@@ -766,7 +780,7 @@ function drawGoogleLiveHole(green){
     fitLiveHoleView(green);updateShotPlanner(green);
 }
 async function initInlineHoleMap(green){
-  const container=$('liveHoleMap'),key=shotPlannerKey();if(!container||!green?.tee||!green?.center)return;
+  const container=$('liveHoleMap'),key=shotPlannerKey();if(!container||!selectedTee(green)||!green?.center)return;
   try{
     await loadGoogleMaps();if($('liveHoleMap')!==container||shotPlannerKey()!==key)return;
     document.querySelector('.live-map-viewport')?.classList.add('google-map-active');
@@ -791,7 +805,7 @@ function startLocation(green){
     const accuracyYards=Math.round(pos.coords.accuracy*1.094),status=$('gpsStatus');lastGpsAccuracyYards=accuracyYards;status.textContent=`Accuracy ±${accuracyYards} yd`;status.classList.toggle('gps-warning',accuracyYards>50);
     const here={lat:pos.coords.latitude,lng:pos.coords.longitude};lastKnownPosition=here;const near=golferIsNearHole(green),segment=activeRouteSegment(near?here:null,green);if(!segment)return;
     updateShotPlanner(green);
-    updateInlineGolferPosition(here,green);orientInlineHoleMap(green,segment.origin,segment.target);loadWeather(near?here:green.tee,segment.target,green.tee);
+    const tee=selectedTee(green);updateInlineGolferPosition(here,green);orientInlineHoleMap(green,segment.origin,segment.target);loadWeather(near?here:tee,segment.target,tee);
   },err=>{if($('gpsStatus'))$('gpsStatus').textContent=err.code===1?'Location permission was denied. Allow it in browser settings.':'Unable to get a GPS signal.'},{enableHighAccuracy:true,maximumAge:3000,timeout:15000});
 }
 function stopLocation(){if(locationWatch!==null){navigator.geolocation.clearWatch(locationWatch);locationWatch=null}}
@@ -805,6 +819,13 @@ function buildEagleGlenDraft(){
     const tees={};for(const color of ['black','blue','white','red'])tees[color]=color==='black'?black:pointToward(black,firstTarget,Math.max(0,blackYards-EAGLE_GLEN_TEE_YARDS[color][index]));
     const front=pointToward(center,approach,12),back=pointToward(center,approach,-12);
     return{tee:black,tees,aim1,aim2,front,center,back,_review:'candidate'};
+  });
+}
+function buildExistingCourseReviewDraft(course,config){
+  return(course.greens||[]).map(green=>{
+    const reference=green.tee||green.tees?.black||green.tees?.blue,firstTarget=green.aim1||green.aim2||green.center;if(!reference||!firstTarget)return{...green,_review:'candidate'};
+    const tees={};for(const color of ['black','blue','white','red'])tees[color]=pointToward(reference,firstTarget,Number(config[color]??0));
+    return{...green,tee:tees.black,tees,_review:'candidate'};
   });
 }
 function bearingDegrees(a,b){const rad=x=>x*Math.PI/180,deg=x=>x*180/Math.PI,dLng=rad(b.lng-a.lng),lat1=rad(a.lat),lat2=rad(b.lat);return(deg(Math.atan2(Math.sin(dLng)*Math.cos(lat2),Math.cos(lat1)*Math.sin(lat2)-Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLng)))+360)%360}
@@ -852,7 +873,7 @@ function isMyPlayer(name){return !s.sharedRoundId||sharedPlayers.some(p=>p.displ
 async function changeScore(encoded,d){const p=s.sharedRoundId?await ensureMyRoundPlayerName():decodeURIComponent(encoded);if(!p)return;s.scores[p]??={};const previous=s.scores[p][s.hole]??Number(s.pars[s.hole-1])??0;const nextScore=Math.max(1,previous+d);s.scores[p][s.hole]=nextScore;if(s.sharedRoundId){const item={round_id:s.sharedRoundId,user_id:currentUser.id,hole:s.hole,strokes:nextScore,updated_at:new Date().toISOString()};pendingScores[pendingScoreKey(item)]=item;persistPendingScores()}save();if(s.v==='round'&&inlineHoleMap?.provider==='google')refreshScoreEntry();else render();if(s.sharedRoundId){const synced=await syncPendingScores();if(!synced&&navigator.onLine)alert('Your score is protected on this phone but has not synchronized yet. The app will keep retrying.')}}
 function updateGoogleRoundHole(){
   if(s.v!=='round'||inlineHoleMap?.provider!=='google')return false;
-  const course=courseById(s.courseId),green=course?.greens?.[s.hole-1],par=Number(s.pars[s.hole-1])||4;if(!green?.tee||!green?.center)return false;
+  const course=courseById(s.courseId),green=course?.greens?.[s.hole-1],par=Number(s.pars[s.hole-1])||4;if(!selectedTee(green)||!green?.center)return false;
   stopLocation();const yards=mappedHoleDistance(green);$('roundMapHole').textContent=s.hole;$('roundMapDistance').textContent=yards;$('roundMapPar').textContent=par;$('liveHoleMap')?.setAttribute('aria-label',`Forward-facing course view of Hole ${s.hole}`);
   const previous=document.querySelector('.hole-edge-arrow.previous');if(previous)previous.disabled=s.hole===1;
   const name=myRoundPlayerName(),holeScore=scoreValue(name)||par,roundTotal=total(name,s.hole);if($('roundHoleScore'))$('roundHoleScore').textContent=holeScore;if($('roundScoreTotal'))$('roundScoreTotal').textContent=`Tap · Total ${roundTotal}`;
@@ -1007,7 +1028,7 @@ function initCoursePreviews(){
 function coursesView(){const backView=coursesReturnView==='accountView'?'accountView':'home';app.innerHTML=`<button class="back" onclick="s.v='${backView}';render()">← ${backView==='accountView'?'Account':'Home'}</button><h1>${adminRole==='super_admin'?'Courses / Players':'Shared Courses'}</h1><p class="muted">Every golfer receives these course maps automatically. Only authorized administrators can change them.</p>${directoryTabs('courses')}${cloudError?`<div class="error-notice">${esc(cloudError)}</div>`:''}${courses.length?`<label class="course-library-search"><span>⌕</span><input type="search" placeholder="Search courses" aria-label="Search shared courses" oninput="filterSharedCourses(this.value)"></label><div id="courseLibraryEmpty" class="empty hidden">No courses match that search.</div><section class="course-library-grid">${courses.map(courseLibraryCard).join('')}</section>`:'<div class="empty">No shared courses have been mapped yet.</div>'}${adminRole?'<button class="primary" onclick="newCourse()">Map a New Course</button>':currentUser?'<div class="notice">Your account does not have course-manager permission.</div>':'<button class="secondary" onclick="signInAdmin()">Admin sign in</button>'}`;setTimeout(initCoursePreviews,0)}
 function mappedCount(c){return(c.greens||[]).filter(g=>g.front&&g.center&&g.back).length}
 function newCourse(){if(!adminRole){alert('Administrator sign-in required.');return}const name=prompt('Course name:');if(!name?.trim())return;const holes=confirm('Does this course have 18 holes?\nChoose Cancel for 9 holes.')?18:9;draft={id:crypto.randomUUID(),isNew:true,name:name.trim(),holes,pars:Array(holes).fill(4),greens:Array.from({length:holes},()=>({tee:null,aim1:null,aim2:null,front:null,center:null,back:null})),mapHole:1,target:'center'};s.v='mapCourse';render()}
-function editCourse(i){if(!adminRole){alert('Administrator sign-in required.');return}draft=JSON.parse(JSON.stringify(courses[i]));draft.isNew=false;draft.mapHole=1;draft.target='center';if(draft.id===EAGLE_GLEN_COURSE_ID&&!draft.greens?.every(g=>g?.tees?.black)){draft.pars=[...EAGLE_GLEN_PARS];draft.greens=buildEagleGlenDraft();draft.intelligentDraft=true;draft.reviewedHoles=Array(18).fill(false);draft.mapStyle='satellite'}s.v='mapCourse';render()}
+function editCourse(i){if(!adminRole){alert('Administrator sign-in required.');return}draft=JSON.parse(JSON.stringify(courses[i]));draft.isNew=false;draft.mapHole=1;draft.target='center';if(draft.id===EAGLE_GLEN_COURSE_ID&&!draft.greens?.every(g=>g?.tees?.black)){draft.pars=[...EAGLE_GLEN_PARS];draft.greens=buildEagleGlenDraft();draft.intelligentDraft=true;draft.reviewedHoles=Array(18).fill(false);draft.mapStyle='satellite'}else if(REVIEW_TEE_OFFSETS[draft.id]&&!draft.greens?.every(g=>g?.tees?.black)){draft.greens=buildExistingCourseReviewDraft(draft,REVIEW_TEE_OFFSETS[draft.id]);draft.intelligentDraft=true;draft.reviewedHoles=Array(draft.holes).fill(false);draft.mapStyle='satellite'}s.v='mapCourse';render()}
 function markerName(key){return({tee:'Reference Tee',tee_black:'Black Tee',tee_blue:'Blue Tee',tee_white:'White Tee',tee_red:'Red Tee',aim1:'Aim 1',aim2:'Aim 2',front:'Front',center:'Center',back:'Back'})[key]||key}
 function markerPoint(green,key){return key.startsWith('tee_')?green.tees?.[key.slice(4)]||null:green[key]||null}
 function setMarkerPoint(green,key,point){if(key.startsWith('tee_')){green.tees??={};green.tees[key.slice(4)]=point;if(key==='tee_black')green.tee=point}else green[key]=point}
