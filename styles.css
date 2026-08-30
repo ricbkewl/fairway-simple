@@ -472,3 +472,13 @@ main.round-fullscreen .live-hole-map{background:#173c2b}
   cursor:pointer;
 }
 .course-name-start:focus-visible{outline:2px solid #d5ad51;outline-offset:3px;border-radius:3px}
+
+/* Permanent planner and contextual restore control below weather */
+.round-fullscreen .map-recenter-button{
+  top:calc(238px + env(safe-area-inset-top));
+  right:max(10px,env(safe-area-inset-right));
+  bottom:auto;
+}
+@media(max-width:390px){
+  .round-fullscreen .map-recenter-button{top:calc(234px + env(safe-area-inset-top))}
+}
