@@ -375,3 +375,45 @@ main.round-fullscreen .live-hole-map{background:#173c2b}
 .round-dock-button>span.chat-nav-icon{font-size:24px}
 .round-score-dock>button:not(.round-score-display){font-size:28px}
 @media(max-width:390px){.round-action-bar{bottom:0}.round-dock-button>span{font-size:24px}.round-dock-button>span.chat-nav-icon{font-size:23px}.round-score-dock>button:not(.round-score-display){font-size:27px}}
+
+/* Field layout: larger shot cards, compact lower-left planner controls */
+.planner-line-label-marker.hit-label>span,
+.planner-line-label-marker.go-label>span{
+  top:0;
+  right:auto;
+  left:0;
+  min-width:82px;
+  padding:7px 10px;
+  border-radius:11px;
+  transform:rotate(var(--map-bearing,0deg)) translate(calc(-100% - 34px),-50%);
+  transform-origin:0 0;
+}
+.planner-line-label-marker b{font-size:18px}
+.planner-line-label-marker em{max-width:104px;font-size:11px}
+.round-fullscreen .shot-planner-controls{
+  top:auto;
+  bottom:calc(62px + env(safe-area-inset-bottom));
+  left:max(8px,env(safe-area-inset-left));
+  gap:4px;
+}
+.round-fullscreen .shot-planner-controls button{
+  padding:5px 7px;
+  border-radius:8px;
+  font-size:8px;
+  line-height:1.05;
+}
+.round-fullscreen .map-wind-card{
+  background:rgba(12,20,16,.38);
+  border:1px solid rgba(255,255,255,.12);
+  backdrop-filter:blur(7px);
+  text-shadow:0 1px 4px rgba(0,0,0,.72);
+}
+@media(max-width:390px){
+  .planner-line-label-marker.hit-label>span,
+  .planner-line-label-marker.go-label>span{
+    min-width:76px;
+    padding:6px 8px;
+    transform:rotate(var(--map-bearing,0deg)) translate(calc(-100% - 28px),-50%);
+  }
+  .round-fullscreen .shot-planner-controls{bottom:calc(58px + env(safe-area-inset-bottom))}
+}
