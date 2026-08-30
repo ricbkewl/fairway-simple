@@ -89,7 +89,7 @@ function positionExpandedGuide(details){
   const headings=[...details.querySelectorAll('.guide-body > h3')],beforeHeading=headings.find(heading=>heading.textContent==='Before Your First Round'),installHeading=headings.find(heading=>heading.textContent==='Save It to Your Home Screen');
   const beforeList=beforeHeading?.nextElementSibling,installGuide=installHeading?.nextElementSibling,installTip=installGuide?.nextElementSibling;
   if(beforeList&&installHeading&&installGuide&&installTip)beforeList.after(installHeading,installGuide,installTip);
-  const update=details.querySelector('.guide-update');if(update)update.textContent='Current feature guide · Version 88 · Updated August 30, 2026';
+  const update=details.querySelector('.guide-update');if(update)update.textContent='Current feature guide · Version 89 · Updated August 30, 2026';
   requestAnimationFrame(()=>requestAnimationFrame(()=>details.querySelector('.guide-opening-line')?.scrollIntoView({behavior:'smooth',block:'start'})));
 }
 function closeAppGuide(button){
@@ -338,7 +338,6 @@ async function createSharedRound(){
   if(error){alert('Round could not be created: '+error.message);if(button){button.disabled=false;button.textContent='Create Protected Round'}return}
   s.sharedRoundId=data.round_id;s.joinCode=data.join_code;s.hole=1;s.done=false;s.resumeView='round';
   await loadSharedRound(false);s.v='round';render();
-  alert(`Round created. Share code ${s.joinCode} with the other golfers.`);
 }
 function signedInGolferFirstName(){return golferProfile?.first_name?.trim()||currentUser?.user_metadata?.first_name?.trim()||''}
 function isGenericGolferName(name){return !name?.trim()||/^golfer$/i.test(name.trim())}
@@ -646,9 +645,11 @@ function round(){
   if(s.done){s.v='recap';recap();return}
   ensureCurrentHolePar();const h=s.hole,p=s.pars[h-1],c=courseById(s.courseId),green=c?.greens?.[h-1];app.classList.add('round-fullscreen');
   app.innerHTML=green?liveHoleMapPanel(green,h,p):`<section class="live-hole-map missing-hole-map"><b>Hole map unavailable</b><span>An administrator needs to map Hole ${h}.</span></section>`;
-  const summary=document.querySelector('.round-map-summary');if(summary&&c){const strip=document.createElement('div');strip.className='round-course-name-strip';strip.textContent=c.name;summary.after(strip)}
+  const summary=document.querySelector('.round-map-summary');if(summary&&c){const strip=document.createElement('div');strip.className='round-course-name-strip';strip.textContent=c.name;summary.after(strip);requestAnimationFrame(positionRoundCourseNameStrip)}
   updateSyncIndicator();if(green){initInlineHoleMap(green);const segment=activeRouteSegment(null,green);if(segment)loadWeather(segment.origin,segment.target,segment.origin);startLocation(green)}
 }
+function positionRoundCourseNameStrip(){const summary=document.querySelector('.round-map-summary'),strip=document.querySelector('.round-course-name-strip');if(!summary||!strip)return;strip.style.top=`${summary.offsetTop+summary.offsetHeight}px`;strip.style.left=`${summary.offsetLeft}px`;strip.style.width=`${summary.offsetWidth}px`}
+window.addEventListener('resize',positionRoundCourseNameStrip);
 function yardagePanel(){return`<section class="gps-card"><div class="gps-signal-row top-gps-signal gps-compact-row"><div class="gps-accuracy"><b>GPS</b><div id="gpsStatus" class="small muted">Locating…</div></div><div class="hole-yardage-compact"><small id="yardageTargetLabel">Yards to Hole</small><b id="centerYards">–</b><em>yd</em></div><div class="top-weather-compact"><span id="currentWeatherIcon">◌</span><div><b id="currentTemperature">—°</b><small id="currentWeatherLabel">Loading</small></div></div></div><div class="club-suggestion featured-club"><div class="club-recommendation-copy"><small>Suggested Club</small><b id="clubSuggestion">—</b><span id="clubSuggestionNote">Waiting for an accurate GPS signal</span></div></div><button class="club-refresh-button" onclick="refreshLocation()">↻ Refresh GPS</button></section>`}
 function loadGoogleMaps(){
   if(window.google?.maps)return Promise.resolve(window.google.maps);
@@ -739,7 +740,7 @@ function fitLiveHoleView(green){
   const points=[...holeRoute(green),green.front,green.back].filter(Boolean);
   if(inlineHoleMap.provider==='google'){
     const bounds=new google.maps.LatLngBounds();points.forEach(point=>bounds.extend(googlePoint(point)));inlineHoleMap.raw.setHeading(0);inlineHoleMap.raw.setTilt(0);
-    google.maps.event.addListenerOnce(inlineHoleMap.raw,'idle',()=>{const zoom=inlineHoleMap.raw.getZoom();if(Number.isFinite(zoom))inlineHoleMap.raw.setZoom(Math.min(21,zoom-.45));orientInlineHoleMap(green);setTimeout(()=>{inlineViewResetting=false;inlineUserMovedMap=false;$('mapRecenterButton')?.classList.add('hidden')},240)});
+    google.maps.event.addListenerOnce(inlineHoleMap.raw,'idle',()=>{const zoom=inlineHoleMap.raw.getZoom();if(Number.isFinite(zoom))inlineHoleMap.raw.setZoom(Math.min(21,zoom+.3));orientInlineHoleMap(green);setTimeout(()=>{inlineViewResetting=false;inlineUserMovedMap=false;$('mapRecenterButton')?.classList.add('hidden')},240)});
     inlineHoleMap.raw.fitBounds(bounds,{top:190,right:72,bottom:115,left:72});return;
   }
   inlineHoleMap.fitBounds(points.map(point=>[point.lat,point.lng]),{padding:[100,70],maxZoom:22,animate:false});
