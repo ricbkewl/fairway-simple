@@ -185,6 +185,7 @@ let googleMapsPromise=null,inlineGoogleOverlays=[];
 const shotPlannerAims={};
 let coursePreviewMaps=[];
 let liveMapStyle=localStorage.atgLiveMapStyle==='terrain'?'terrain':'satellite';
+const LIVE_MAP_TILT=55;
 let pendingScores=JSON.parse(localStorage.atgPendingScores||'{}');
 let pendingHoleStats=JSON.parse(localStorage.atgPendingHoleStats||'{}');
 let scoreSyncPromise=null;
@@ -883,24 +884,27 @@ function orientInlineHoleMap(green,origin=null,target=null){
   const segment=activeRouteSegment(null,green),start=origin||segment?.origin||selectedTee(green),end=target||segment?.target||green.center,container=$('liveHoleMap'),bearing=bearingDegrees(start,end);
   if(inlineHoleMap.provider==='google'){
     if(container){container.dataset.forwardBearing=String(bearing);container.style.setProperty('--map-bearing','0deg');container.style.transform='none'}
-    if(!inlineUserMovedMap||inlineViewResetting)inlineHoleMap.raw.moveCamera({heading:bearing,tilt:40});
+    if(!inlineUserMovedMap||inlineViewResetting)inlineHoleMap.raw.moveCamera({heading:bearing,tilt:LIVE_MAP_TILT});
     return;
   }
   if(container){container.dataset.forwardBearing=String(bearing);container.style.setProperty('--map-bearing',`${bearing}deg`);container.style.transform=`rotate(${-bearing}deg)`}
 }
 function zoomLiveHoleMap(change){if(!inlineHoleMap)return;inlineHoleMap.setZoom(inlineHoleMap.getZoom()+change,{animate:true})}
 function showMapRecenterButton(){if(!inlineViewResetting){inlineUserMovedMap=true;$('mapRecenterButton')?.classList.remove('hidden')}}
+function onceGoogleMapIdle(rawMap,timeout=900){return new Promise(resolve=>{let finished=false;const done=()=>{if(finished)return;finished=true;resolve()};google.maps.event.addListenerOnce(rawMap,'idle',done);setTimeout(done,timeout)})}
+function googleHolePointsInsideSafeFrame(rawMap,points){return new Promise(resolve=>{let finished=false;const done=value=>{if(finished)return;finished=true;resolve(value)},overlay=new google.maps.OverlayView();overlay.onAdd=()=>{};overlay.onRemove=()=>{};overlay.draw=()=>{const projection=overlay.getProjection(),div=rawMap.getDiv();if(!projection||!div)return;const width=div.clientWidth,height=div.clientHeight;if(!width||!height){done(false);return}const safe=points.every(point=>{const pixel=projection.fromLatLngToContainerPixel(googlePoint(point));if(!pixel)return false;const rightEdge=pixel.y>105&&pixel.y<265?width-104:width-38;return pixel.x>=38&&pixel.x<=rightEdge&&pixel.y>=138&&pixel.y<=height-64});overlay.setMap(null);done(safe)};overlay.setMap(rawMap);setTimeout(()=>{overlay.setMap(null);done(false)},700)})}
+async function maximizeGoogleHoleZoom(rawMap,points){let zoom=rawMap.getZoom();if(!Number.isFinite(zoom))return;for(let i=0;i<5&&!await googleHolePointsInsideSafeFrame(rawMap,points);i++){zoom-=.18;rawMap.setZoom(zoom);await onceGoogleMapIdle(rawMap)}for(let i=0;i<5;i++){const prior=zoom,candidate=Math.min(21,prior+.12);if(candidate===prior)break;rawMap.setZoom(candidate);await onceGoogleMapIdle(rawMap);if(!await googleHolePointsInsideSafeFrame(rawMap,points)){rawMap.setZoom(prior);await onceGoogleMapIdle(rawMap);break}zoom=candidate}}
 function fitLiveHoleView(green){
   if(!inlineHoleMap||!selectedTee(green)||!green?.center)return;
   inlineViewResetting=true;inlineUserMovedMap=false;inlineHoleGreen=green;$('mapRecenterButton')?.classList.add('hidden');
   const points=[...holeRoute(green),green.front,green.back].filter(Boolean);
   if(inlineHoleMap.provider==='google'){
-    const bounds=new google.maps.LatLngBounds();points.forEach(point=>bounds.extend(googlePoint(point)));inlineHoleMap.raw.setHeading(0);inlineHoleMap.raw.setTilt(0);
-    google.maps.event.addListenerOnce(inlineHoleMap.raw,'idle',()=>{const zoom=inlineHoleMap.raw.getZoom();if(Number.isFinite(zoom))inlineHoleMap.raw.setZoom(Math.min(20.5,zoom-.45));orientInlineHoleMap(green);setTimeout(()=>{inlineViewResetting=false;inlineUserMovedMap=false;$('mapRecenterButton')?.classList.add('hidden')},320)});
-    inlineHoleMap.raw.fitBounds(bounds,{top:190,right:62,bottom:105,left:62});return;
+    const rawMap=inlineHoleMap.raw,bounds=new google.maps.LatLngBounds();points.forEach(point=>bounds.extend(googlePoint(point)));rawMap.setHeading(0);rawMap.setTilt(0);
+    google.maps.event.addListenerOnce(rawMap,'idle',async()=>{if(inlineHoleMap?.raw!==rawMap)return;orientInlineHoleMap(green);await onceGoogleMapIdle(rawMap);if(inlineHoleMap?.raw!==rawMap)return;await maximizeGoogleHoleZoom(rawMap,points);if(inlineHoleMap?.raw!==rawMap)return;inlineViewResetting=false;inlineUserMovedMap=false;$('mapRecenterButton')?.classList.add('hidden')});
+    rawMap.fitBounds(bounds,{top:145,right:48,bottom:72,left:48});return;
   }
-  inlineHoleMap.fitBounds(points.map(point=>[point.lat,point.lng]),{padding:[100,70],maxZoom:22,animate:false});
-  inlineHoleMap.setZoom(inlineHoleMap.getZoom()-1.5,{animate:false});
+  inlineHoleMap.fitBounds(points.map(point=>[point.lat,point.lng]),{padding:[78,46],maxZoom:22,animate:false});
+  inlineHoleMap.setZoom(inlineHoleMap.getZoom()-.35,{animate:false});
   setTimeout(()=>{orientInlineHoleMap(green);$('mapRecenterButton')?.classList.add('hidden');inlineViewResetting=false},180);
 }
 function resetLiveHoleView(){fitLiveHoleView(inlineHoleGreen)}
@@ -958,7 +962,7 @@ async function initInlineHoleMap(green){
   try{
     await loadGoogleMaps();if($('liveHoleMap')!==container||shotPlannerKey()!==key)return;
     document.querySelector('.live-map-viewport')?.classList.add('google-map-active');
-    const rawMap=new google.maps.Map(container,{center:googlePoint(green.center),zoom:17,mapId:GOOGLE_MAP_ID,mapTypeId:liveMapStyle,heading:bearingDegrees(selectedTee(green),green.center),tilt:40,disableDefaultUI:true,clickableIcons:false,gestureHandling:'greedy',keyboardShortcuts:false,headingInteractionEnabled:true,tiltInteractionEnabled:true,backgroundColor:'#173c2b'});
+    const rawMap=new google.maps.Map(container,{center:googlePoint(green.center),zoom:17,mapId:GOOGLE_MAP_ID,mapTypeId:liveMapStyle,heading:bearingDegrees(selectedTee(green),green.center),tilt:LIVE_MAP_TILT,disableDefaultUI:true,clickableIcons:false,gestureHandling:'greedy',keyboardShortcuts:false,headingInteractionEnabled:true,tiltInteractionEnabled:true,backgroundColor:'#173c2b'});
     inlineHoleMap=googleMapFacade(rawMap,container);const label=document.querySelector('.forward-label');if(label)label.textContent='GOOGLE MAPS · FAIRWAY ROUTE · FORWARD';drawGoogleLiveHole(green);
     setTimeout(()=>{if(inlineHoleMap?.raw!==rawMap)return;rawMap.addListener('dragstart',showMapRecenterButton);rawMap.addListener('zoom_changed',showMapRecenterButton);rawMap.addListener('heading_changed',showMapRecenterButton);rawMap.addListener('tilt_changed',showMapRecenterButton)},650);
   }catch(error){
