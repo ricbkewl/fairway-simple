@@ -1,0 +1,39 @@
+/* Version 108: maximum-tilt play view and quick scorecard access */
+.round-score-stack{
+  position:absolute;
+  z-index:1500;
+  left:50%;
+  bottom:calc(14px + env(safe-area-inset-bottom));
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:5px;
+  transform:translateX(-50%);
+}
+.round-score-stack .round-floating-score{
+  position:relative;
+  left:auto;
+  bottom:auto;
+  transform:none;
+}
+.quick-scorecard-button{
+  width:82px;
+  min-height:27px;
+  padding:4px 6px;
+  border:1px solid rgba(255,255,255,.42);
+  border-radius:10px;
+  background:rgba(247,250,248,.92);
+  box-shadow:0 5px 16px rgba(0,0,0,.24);
+  color:#176b45;
+  font:inherit;
+  font-size:10px;
+  font-weight:650;
+  line-height:1;
+  cursor:pointer;
+  backdrop-filter:blur(10px);
+}
+.quick-scorecard-button:active{transform:translateY(1px)}
+@media(max-width:390px){
+  .round-score-stack{bottom:calc(10px + env(safe-area-inset-bottom))}
+  .quick-scorecard-button{width:74px;min-height:25px;font-size:9px}
+}
