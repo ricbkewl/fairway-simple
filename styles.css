@@ -362,6 +362,13 @@ main.round-fullscreen .live-hole-map{height:100vh}
 .round-qr-summary button:active img{box-shadow:0 1px 3px rgba(0,0,0,.28);transform:translateY(2px) scale(.96)}
 @media(max-width:390px){.round-qr-summary img{width:41px;height:41px;border-radius:10px}}
 
+/* Main-menu course shortcut and two-thirds/one-third resume control */
+.home-courses-link{margin-top:0!important}
+.home-resume-split{display:grid;grid-template-columns:2fr 1fr;margin:10px 0 0;border-radius:12px;overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,.22)}
+.home-resume-split .home-primary{width:100%;min-height:52px;border-radius:0;box-shadow:none;text-align:left}
+.home-end-round{min-height:52px;padding:8px 6px;border:0;border-left:1px solid rgba(18,41,31,.28);background:linear-gradient(135deg,#c79332,#a96f1f);color:#14281f;font:inherit;font-size:11px;font-weight:900;line-height:1.05;cursor:pointer}
+.home-end-round:active{filter:brightness(.92)}
+
 /* Emphasize live distance and soften the combined weather/wind overlay */
 .round-fullscreen .route-remaining-summary b{color:#f5cf68;text-shadow:0 1px 4px rgba(0,0,0,.35)}
 .round-fullscreen .map-wind-card{background:rgba(12,20,16,.56);backdrop-filter:blur(6px)}
