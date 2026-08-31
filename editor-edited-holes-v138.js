@@ -1,4 +1,4 @@
-/* Version 139: show previously edited holes with full Hole # labels as reference overlays while mapping. */
+/* Version 140: clickable hole-status navigator plus edited-hole map references. */
 (function(){
   function editorHoleReady(g){return Boolean((g?.tees?.black||g?.tee)&&g?.center)}
   function editedHoleIndices(){
@@ -14,14 +14,33 @@
     draft._referenceHole=Number(hole)||null;
     render();
   };
+  window.goToEditorHole=async function(hole){
+    if(!draft)return;
+    const target=Math.max(1,Math.min(Number(hole)||1,draft.holes||draft.greens?.length||1));
+    if(target===draft.mapHole)return;
+    /* Protect current work before allowing a non-sequential jump. */
+    if(typeof autoSaveCurrentCourseHole==='function'){
+      const ok=await autoSaveCurrentCourseHole();
+      if(!ok)return;
+    }
+    const g=draft.greens?.[target-1]||{};
+    const point=(g.tees?.black||g.tee||g.aim1||g.aim2||g.center||g.front||g.back);
+    draft.mapHole=target;
+    draft._referenceHole=null;
+    /* Edited holes open centered on their mapped location. Unmapped holes retain
+       the current camera so the mapper can continue walking the course naturally. */
+    if(point)draft.mapView={lat:Number(point.lat),lng:Number(point.lng),zoom:18};
+    render();
+  };
   function referenceStrip(){
     if(!draft?.greens?.length)return'';
     const edited=editedHoleIndices(),current=draft.mapHole||1,visible=editedHolesVisible();
     const pills=Array.from({length:draft.holes||draft.greens.length},(_,i)=>{
       const h=i+1,done=edited.includes(h),active=h===current,ref=h===draft._referenceHole;
-      return `<button type="button" class="edited-hole-pill ${done?'done':''} ${active?'current':''} ${ref?'reference':''}" ${done&&!active?`onclick="highlightEditedHole(${h})"`:''} ${done&&!active?'':'disabled'} aria-label="Hole ${h}${done?' edited':''}${active?' current':''}">${done||active?`Hole ${h}${done?' ✓':''}`:`${h}`}</button>`;
+      const status=active?'Current':done?'Edited':'Not mapped';
+      return `<button type="button" class="edited-hole-pill ${done?'done':''} ${active?'current':''} ${ref?'reference':''}" onclick="goToEditorHole(${h})" aria-current="${active?'true':'false'}" aria-label="Go to Hole ${h}. ${status}">${done||active?`Hole ${h}${done?' ✓':''}`:`Hole ${h}`}</button>`;
     }).join('');
-    return `<section class="edited-holes-panel"><div><small>EDITED HOLES</small><b>${edited.length} mapped</b><span>Each completed hole is labeled on the map so you can use it as a landmark.</span></div><button type="button" class="edited-holes-toggle ${visible?'on':''}" onclick="toggleEditedHoleReferences()">${visible?'Hide':'Show'} references</button><div class="edited-hole-strip">${pills}</div></section>`;
+    return `<section class="edited-holes-panel"><div><small>HOLE STATUS</small><b>${edited.length} mapped</b><span>Tap any hole to go directly there. Your current hole is auto-saved before switching.</span></div><button type="button" class="edited-holes-toggle ${visible?'on':''}" onclick="toggleEditedHoleReferences()">${visible?'Hide':'Show'} references</button><div class="edited-hole-strip">${pills}</div></section>`;
   }
   function getRawGoogleMap(){
     try{return map?.raw||map?._raw||map?.googleMap||null}catch{return null}
