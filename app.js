@@ -35,6 +35,22 @@ const REVIEW_TEE_OFFSETS={
   'df4efa6f-64da-4a01-bba8-05be8160ea23':{name:'River View Golf Course',blue:0,white:23,red:47},
   '0a4f8d85-153e-421e-8b4a-1dedee34e724':{name:'Sierra Lakes Golf Club',black:0,blue:21,white:40,red:82}
 };
+const ROYALE_JAKARTA_LOOPS={
+  north:{label:'North',pars:[4,5,4,3,4,4,4,3,5],meters:{black:[362,550,344,150,373,431,400,171,510],blue:[345,500,321,124,350,399,388,153,487],white:[319,471,289,111,318,365,340,133,455],red:[301,448,273,96,281,317,290,118,296]}},
+  south:{label:'South',pars:[4,3,5,4,4,3,4,4,5],meters:{black:[365,155,490,432,365,189,400,420,563],blue:[347,137,474,411,351,176,382,401,515],white:[316,117,449,369,318,143,347,354,482],red:[272,96,387,309,280,111,294,300,383]}},
+  west:{label:'West',pars:[4,5,4,3,4,4,3,4,5],meters:{black:[389,554,343,150,447,322,194,425,494],blue:[372,516,327,138,429,307,175,408,466],white:[350,479,300,122,395,281,152,360,428],red:[308,406,260,99,338,250,117,315,379]}}
+};
+const ROYALE_JAKARTA_LAYOUTS={
+  'north-south':{label:'North–South',loops:['north','south'],note:'Balanced 18-hole routing'},
+  'south-west':{label:'South–West',loops:['south','west'],note:'Tournament routing · Indonesian Masters'},
+  'west-north':{label:'West–North',loops:['west','north'],note:'Championship 18-hole routing'}
+};
+function royaleJakartaLayout(key){
+  const layout=ROYALE_JAKARTA_LAYOUTS[key];if(!layout)return null;
+  const loopData=layout.loops.map(loop=>ROYALE_JAKARTA_LOOPS[loop]);
+  const meters={};for(const tee of ['black','blue','white','red'])meters[tee]=loopData.flatMap(loop=>loop.meters[tee]);
+  return{id:`catalog-royale-jakarta-${key}`,name:`Royale Jakarta Golf Club · ${layout.label}`,layoutKey:key,holes:18,pars:loopData.flatMap(loop=>loop.pars),par_total:72,meters,greens:[],catalogOnly:true,catalogApproved:true,course_type:'Private · 27-hole facility',city:'East Jakarta',country:'Indonesia'};
+}
 const LISTED_COURSE_CATALOG=[
   {id:'catalog-el-prado-butterfield',name:'Butterfield Stage Course at El Prado',match:['butterfieldstagecourse'],city:'Chino',state:'CA',postal_code:'91708',address:'6555 Pine Avenue',holes:18,par_total:72,course_type:'Public',catalog_point:{lat:34.0122,lng:-117.6889},source:'https://www.elpradogolfcourses.com/'},
   {id:'catalog-el-prado-chino-creek',name:'Chino Creek Course at El Prado',match:['chinocreekcourse'],city:'Chino',state:'CA',postal_code:'91708',address:'6555 Pine Avenue',holes:18,par_total:72,course_type:'Public',catalog_point:{lat:34.0122,lng:-117.6889},source:'https://www.elpradogolfcourses.com/'},
@@ -58,14 +74,14 @@ const LISTED_COURSE_CATALOG=[
   {id:'catalog-glen-ivy',name:'Glen Ivy Golf Club',match:['glenivygolfcourse'],city:'Corona',state:'CA',postal_code:'92883',address:'24400 Trilogy Parkway',holes:18,par_total:72,course_type:'Public',catalog_point:{lat:33.8753,lng:-117.5664},source:'https://www.glenivygolf.com/'},
   {id:'catalog-hidden-valley',name:'Hidden Valley Golf Club',city:'Norco',state:'CA',postal_code:'92860',address:'10 Clubhouse Drive',holes:18,par_total:72,course_type:'Public',catalog_point:{lat:33.9311,lng:-117.5487},source:'https://www.hiddenvalleygolf.com/'},
   {id:'catalog-marshall-canyon',name:'Marshall Canyon Golf Course',city:'La Verne',state:'CA',postal_code:'91750',address:'6100 North Stephens Ranch Road',holes:18,par_total:71,course_type:'Public',catalog_point:{lat:34.1008,lng:-117.7678},source:'https://www.marshallcanyon.com/'},
-  {id:'catalog-royale-jakarta',name:'Royale Jakarta Golf Club',city:'East Jakarta',state:'DKI Jakarta',postal_code:'13610',country:'Indonesia',address:'Jl. Radar Selatan, RT.4/RW.4, Halim Perdanakusuma, Kec. Makasar',holes:18,par_total:72,course_type:'Private · 27-hole facility',catalog_note:'The facility has North, South and West nine-hole layouts. Confirm the two nines in play before the round; the app catalogs an 18-hole Par 72 round.',source:'https://www.royalejakarta.com/golf-course/'}
+  {id:'catalog-royale-jakarta',name:'Royale Jakarta Golf Club',city:'East Jakarta',state:'DKI Jakarta',postal_code:'13610',country:'Indonesia',address:'Jl. Radar Selatan, RT.4/RW.4, Halim Perdanakusuma, Kec. Makasar',holes:27,par_total:108,course_type:'Private · 3 × 9-hole loops',catalog_point:{lat:-6.27165,lng:106.901093},royaleFacility:true,catalog_note:'Choose North–South, South–West or West–North when starting a round. Each nine is Par 36; GPS markers remain provisional until visually reviewed.',source:'https://www.royalejakarta.com/golf-course/'}
 ];
 function courseMatchKey(value){return String(value||'').toLowerCase().replace(/\b(golf|course|club|country|at|the)\b/g,'').replace(/[^a-z0-9]/g,'')}
 function mergeListedCourseCatalog(cloudCourses){
   const merged=(cloudCourses||[]).filter(course=>!course.catalogOnly).map(course=>({...course}));
   for(const catalog of LISTED_COURSE_CATALOG){
     const keys=new Set([courseMatchKey(catalog.name),...(catalog.match||[]).map(courseMatchKey)]),existing=merged.find(course=>keys.has(courseMatchKey(course.name)));
-    if(existing)Object.assign(existing,{city:catalog.city,state:catalog.state,postal_code:catalog.postal_code,address:catalog.address,par_total:catalog.par_total,course_type:catalog.course_type,catalog_point:catalog.catalog_point,catalog_note:catalog.catalog_note,source:catalog.source,catalogApproved:true});
+    if(existing)Object.assign(existing,{city:catalog.city,state:catalog.state,postal_code:catalog.postal_code,address:catalog.address,par_total:catalog.par_total,course_type:catalog.course_type,catalog_point:catalog.catalog_point,catalog_note:catalog.catalog_note,source:catalog.source,royaleFacility:catalog.royaleFacility,catalogApproved:true});
     else merged.push({...catalog,pars:[],greens:[],catalogOnly:true,catalogApproved:true});
   }
   return merged.sort((a,b)=>a.name.localeCompare(b.name));
@@ -127,8 +143,8 @@ function positionExpandedGuide(details){
   const beforeList=beforeHeading?.nextElementSibling,installGuide=installHeading?.nextElementSibling,installTip=installGuide?.nextElementSibling;
   if(beforeList&&installHeading&&installGuide&&installTip)beforeList.after(installHeading,installGuide,installTip);
   const courseHeading=headings.find(heading=>heading.textContent==='Courses, Account & History'),courseList=courseHeading?.nextElementSibling;
-  if(courseList&&!courseList.querySelector('[data-provisional-guide]'))courseList.insertAdjacentHTML('beforeend','<li data-provisional-guide>Courses approved for selection may still contain provisional GPS coordinates. Review and correct tees, aim points and greens before play when necessary.</li>');
-  const update=details.querySelector('.guide-update');if(update)update.textContent='Current feature guide · Version 91 · Updated August 31, 2026';
+  if(courseList&&!courseList.querySelector('[data-provisional-guide]'))courseList.insertAdjacentHTML('beforeend','<li data-provisional-guide>Courses approved for selection may still contain provisional GPS coordinates. Review and correct tees, aim points and greens before play when necessary.</li><li data-provisional-guide>Royale Jakarta is organized as North, South and West nine-hole loops. Choose North–South, South–West or West–North when starting its round.</li>');
+  const update=details.querySelector('.guide-update');if(update)update.textContent='Current feature guide · Version 92 · Updated August 31, 2026';
   requestAnimationFrame(()=>requestAnimationFrame(()=>details.querySelector('.guide-opening-line')?.scrollIntoView({behavior:'smooth',block:'start'})));
 }
 function closeAppGuide(button){
@@ -1119,7 +1135,14 @@ function renderCourseFilterSheet(){
 }
 function showCourseFilters(){const overlay=document.createElement('div');overlay.className='course-filter-overlay';overlay.onclick=event=>{if(event.target===overlay)closeCourseFilters()};overlay.innerHTML='<section class="course-filter-sheet" role="dialog" aria-modal="true" aria-label="Filter courses"></section>';document.body.appendChild(overlay);renderCourseFilterSheet()}
 function requestCourseLibraryLocation(){if(!navigator.geolocation)return;navigator.geolocation.getCurrentPosition(position=>{courseLibraryLocation={lat:position.coords.latitude,lng:position.coords.longitude};refreshCourseLibrary()},()=>{}, {enableHighAccuracy:false,timeout:7000,maximumAge:300000})}
-async function startCourseFromLibrary(index){const course=courses[index];if(!course)return;if(!confirm(`Would you like to start a new game at ${course.name}?${course.catalogOnly?'\n\nThis course is approved for selection, but its GPS hole mapping is still pending. Review the hole pars before creating the round.':''}`))return;rememberRecentCourse(course.id);await start();if(s.v!=='setup')return;if(!course.catalogOnly){chooseCourse(course.id);return}s.courseId=null;s.course=course.name;s.holes=course.holes;s.pars=Array(course.holes).fill(4);s.v='pars';s.resumeView='pars';save();alert(`Review the pars for ${course.name} before creating the round. The published total is Par ${course.par_total||'not yet verified'}.`);render()}
+async function startCourseFromLibrary(index){const course=courses[index];if(!course)return;if(course.royaleFacility){rememberRecentCourse(course.id);await start();if(s.v==='setup')showRoyaleJakartaLayouts();return}if(!confirm(`Would you like to start a new game at ${course.name}?${course.catalogOnly?'\n\nThis course is approved for selection, but its GPS hole mapping is still pending. Review the hole pars before creating the round.':''}`))return;rememberRecentCourse(course.id);await start();if(s.v!=='setup')return;if(!course.catalogOnly){chooseCourse(course.id);return}s.courseId=null;s.course=course.name;s.holes=course.holes;s.pars=Array(course.holes).fill(4);s.v='pars';s.resumeView='pars';save();alert(`Review the pars for ${course.name} before creating the round. The published total is Par ${course.par_total||'not yet verified'}.`);render()}
+function showRoyaleJakartaLayouts(){
+  document.querySelector('.royale-layout-overlay')?.remove();const overlay=document.createElement('div');overlay.className='royale-layout-overlay';overlay.onclick=event=>{if(event.target===overlay)overlay.remove()};
+  overlay.innerHTML=`<section class="royale-layout-sheet" role="dialog" aria-modal="true" aria-label="Choose Royale Jakarta routing"><div class="royale-layout-heading"><span><small>ROYALE JAKARTA GOLF CLUB</small><b>Choose today’s 18 holes</b></span><button onclick="this.closest('.royale-layout-overlay').remove()" aria-label="Close routing selection">×</button></div><p>The facility has three separate Par 36 loops. Select the two nines listed for today’s round.</p>${Object.entries(ROYALE_JAKARTA_LAYOUTS).map(([key,layout])=>{const course=royaleJakartaLayout(key),black=course.meters.black.reduce((sum,value)=>sum+value,0),white=course.meters.white.reduce((sum,value)=>sum+value,0);return`<button class="royale-layout-choice ${key==='south-west'?'featured':''}" onclick="chooseRoyaleJakartaLayout('${key}')"><span><b>${esc(layout.label)}</b><small>${esc(layout.note)}</small></span><em>Par 72<br>${black.toLocaleString()} m black · ${white.toLocaleString()} m white</em><i>›</i></button>`}).join('')}<div class="notice"><b>Mapping status:</b> scorecard data is loaded. Satellite tee, aim and green coordinates remain provisional until reviewed before play.</div></section>`;document.body.appendChild(overlay)
+}
+function chooseRoyaleJakartaLayout(key){
+  const course=royaleJakartaLayout(key);if(!course)return;s.courseId=null;s.course=course.name;s.holes=18;s.pars=[...course.pars];s.teeSet='black';s.royaleLayout=key;s.royaleTeeMeters=course.meters;s.v='pars';s.resumeView='pars';document.querySelector('.royale-layout-overlay')?.remove();save();render()
+}
 function initCoursePreviews(){
   const previews=[...document.querySelectorAll('.course-preview-map')];if(!previews.length||!window.L)return;
   const initialize=node=>{if(node.dataset.ready)return;node.dataset.ready='1';const previewMap=L.map(node,{zoomControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,boxZoom:false,keyboard:false,touchZoom:false,attributionControl:false}).setView([Number(node.dataset.lat),Number(node.dataset.lng)],15);if(MAPTILER_API_KEY)addSatelliteLayer(previewMap);else addStreetLayer(previewMap);coursePreviewMaps.push(previewMap)};
