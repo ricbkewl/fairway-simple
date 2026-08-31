@@ -642,4 +642,11 @@ main.round-fullscreen .live-hole-map{height:100dvh}.round-fullscreen .live-map-v
   backdrop-filter:blur(7px);
 }
 .round-fullscreen .hole-map-attribution{right:max(8px,env(safe-area-inset-right));bottom:calc(90px + env(safe-area-inset-bottom));padding:2px 4px;border-radius:4px;background:rgba(12,20,16,.38);backdrop-filter:blur(5px)}
+
+/* Version 105: lighter, calmer menu typography */
+.app-side-menu>button{font-weight:650}
+.app-side-menu small{font-weight:550}
+.menu-about-logo small{font-weight:700!important}
+.app-menu-round-tools button{font-weight:650}
+.app-side-menu>.menu-start-round{font-weight:650}
 .tee-choice{display:grid;width:100%;grid-template-columns:22px 1fr auto;gap:11px;align-items:center;margin:7px 0;padding:11px 12px;border:1px solid var(--line);border-radius:13px;background:#f8fbf9;color:var(--ink);font:inherit;text-align:left;cursor:pointer}.tee-choice.on{border-color:#c89d35;background:#fff8e4;box-shadow:0 0 0 1px rgba(200,157,53,.15)}.tee-choice span{display:flex;flex-direction:column}.tee-choice span b{font-size:14px}.tee-choice span small{color:var(--muted);font-size:10px}.tee-choice em{color:var(--g);font-size:10px;font-style:normal;font-weight:900}.tee-choice-dot{display:block;width:17px;height:17px;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 1px #9aa8a0}.tee-choice-dot.black{background:#111}.tee-choice-dot.blue{background:#2671d9}.tee-choice-dot.white{background:#fff}.tee-choice-dot.red{background:#d93636}
