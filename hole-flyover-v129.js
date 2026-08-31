@@ -1,6 +1,6 @@
-/* Version 130: smoother cinematic hole-to-hole camera flyover for Google play maps. */
+/* Version 131: cinematic hole-to-hole camera flyover with a no-snap landing handoff. */
 (function(){
-  const FLYOVER_MS=3300;
+  const FLYOVER_MS=3450;
   let flyoverFrame=null,flyoverResolve=null,flyoverActive=false;
 
   function reducedMotion(){return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches}
@@ -26,16 +26,45 @@
     host.appendChild(card);
   }
 
+  /* Update the existing round UI in place after the camera arrives. The previous
+     version called showRoundHole(), which let the normal camera-orientation path
+     immediately reassert itself. That second camera command is the snap visible
+     in the screen recording. */
+  function adoptArrivedHole(targetHole){
+    const course=selectedRoundCourse(),green=course?.greens?.[targetHole-1],par=Number(s.pars[targetHole-1])||4;
+    if(!green||!selectedTee(green)||!green.center){s.hole=targetHole;showRoundHole();return;}
+    s.hole=targetHole;
+    stopLocation();
+    const yards=mappedHoleDistance(green);
+    if($('roundMapHole'))$('roundMapHole').textContent=targetHole;
+    if($('roundMapDistance'))$('roundMapDistance').textContent=yards;
+    if($('roundMapPar'))$('roundMapPar').textContent=par;
+    if($('centerYards'))$('centerYards').textContent=yards;
+    $('liveHoleMap')?.setAttribute('aria-label',`Forward-facing course view of Hole ${targetHole}`);
+    const previous=document.querySelector('.hole-edge-arrow.previous');if(previous)previous.disabled=targetHole===1;
+    const name=myRoundPlayerName(),holeScore=scoreValue(name)||par,roundTotal=total(name,targetHole);
+    if($('roundHoleScore'))$('roundHoleScore').textContent=holeScore;
+    if($('roundScoreTotal'))$('roundScoreTotal').textContent=`Tap · Total ${roundTotal}`;
+    if(inlineHoleMap?.provider==='google'){
+      try{inlineHoleMap.raw.setMapTypeId(liveMapStyle);}catch{}
+      drawGoogleLiveHole(green);
+    }
+    const segment=activeRouteSegment(null,green);
+    if(segment)loadWeather(segment.origin,segment.target,segment.origin);
+    save();
+    /* Give Google one quiet second after landing before GPS/orientation callbacks
+       are allowed to steer the camera again. */
+    const priorUserMoved=inlineUserMovedMap;inlineUserMovedMap=true;
+    setTimeout(()=>{
+      inlineUserMovedMap=priorUserMoved;
+      startLocation(green);
+    },1100);
+  }
+
   function settleHoleWithoutSnap(targetHole){
     if(flyoverFrame)cancelAnimationFrame(flyoverFrame);flyoverFrame=null;flyoverActive=false;
     removeFlyoverCard();
-    s.hole=targetHole;
-    /* Prevent the normal hole refresh/geolocation callbacks from immediately fighting
-       the final flyover camera. We release control after the UI has caught up. */
-    const priorUserMoved=inlineUserMovedMap;
-    inlineUserMovedMap=true;
-    showRoundHole();
-    setTimeout(()=>{inlineUserMovedMap=priorUserMoved;},850);
+    adoptArrivedHole(targetHole);
     const done=flyoverResolve;flyoverResolve=null;if(done)done(true);
   }
   window.skipHoleFlyover=function(){if(flyoverActive&&flyoverResolve)flyoverResolve('skip')};
@@ -45,7 +74,7 @@
       const course=selectedRoundCourse(),green=course?.greens?.[targetHole-1],tee=selectedTee(green);
       if(!green||!tee||!green.center||inlineHoleMap?.provider!=='google'||!inlineHoleMap.raw){resolve(false);return;}
       const raw=inlineHoleMap.raw,startCenter=inlineHoleMap.getCenter?.()||tee,startZoom=Number(raw.getZoom?.()||18),startHeading=Number(raw.getHeading?.()||0),startTilt=Number(raw.getTilt?.()||67.5);
-      const destination=flyoverCenter(green),heading=targetHeading(green),cruiseZoom=clamp(startZoom-1.75,15.8,17.25),finalZoom=clamp(startZoom,17.3,19),par=Number(s.pars[targetHole-1])||4,yards=targetYards(green);
+      const destination=flyoverCenter(green),heading=targetHeading(green),cruiseZoom=clamp(startZoom-1.65,15.9,17.35),finalZoom=clamp(startZoom,17.3,19),par=Number(s.pars[targetHole-1])||4,yards=targetYards(green);
       showFlyoverCard(targetHole,par,yards);stopLocation();flyoverActive=true;flyoverResolve=resolve;
       const started=performance.now();
       function frame(now){
@@ -53,24 +82,12 @@
         if(flyoverResolve===null){settleHoleWithoutSnap(targetHole);return;}
         const t=clamp((now-started)/FLYOVER_MS,0,1);
         let center,zoom,tilt,cameraHeading;
-        if(t<.24){
-          const p=smoothstep(t/.24);
-          center=startCenter;
-          zoom=lerp(startZoom,cruiseZoom,p);
-          tilt=lerp(startTilt,34,p);
-          cameraHeading=headingLerp(startHeading,heading,p*.28);
-        }else if(t<.68){
-          const p=smoothstep((t-.24)/.44);
-          center=pointLerp(startCenter,destination,p);
-          zoom=cruiseZoom;
-          tilt=lerp(34,43,p);
-          cameraHeading=headingLerp(startHeading,heading,.28+.62*p);
+        if(t<.23){
+          const p=smoothstep(t/.23);center=startCenter;zoom=lerp(startZoom,cruiseZoom,p);tilt=lerp(startTilt,35,p);cameraHeading=headingLerp(startHeading,heading,p*.25);
+        }else if(t<.66){
+          const p=smoothstep((t-.23)/.43);center=pointLerp(startCenter,destination,p);zoom=cruiseZoom;tilt=lerp(35,44,p);cameraHeading=headingLerp(startHeading,heading,.25+.63*p);
         }else{
-          const p=smoothstep((t-.68)/.32);
-          center=pointLerp(pointLerp(startCenter,destination,1),destination,p);
-          zoom=lerp(cruiseZoom,finalZoom,p);
-          tilt=lerp(43,67.5,p);
-          cameraHeading=headingLerp(headingLerp(startHeading,heading,.9),heading,p);
+          const p=smoothstep((t-.66)/.34);center=destination;zoom=lerp(cruiseZoom,finalZoom,p);tilt=lerp(44,67.5,p);cameraHeading=headingLerp(headingLerp(startHeading,heading,.88),heading,p);
         }
         try{raw.moveCamera({center,zoom,heading:cameraHeading,tilt});}catch{}
         if(t>=1){settleHoleWithoutSnap(targetHole);return;}
