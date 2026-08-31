@@ -1,12 +1,12 @@
-/* Version 129: cinematic hole-to-hole camera flyover for Google play maps. */
+/* Version 130: smoother cinematic hole-to-hole camera flyover for Google play maps. */
 (function(){
-  const FLYOVER_MS=2700;
+  const FLYOVER_MS=3300;
   let flyoverFrame=null,flyoverResolve=null,flyoverActive=false;
 
   function reducedMotion(){return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches}
   function flyoverAllowed(){return localStorage.atgHoleFlyover!=='off'&&!reducedMotion()}
   function clamp(value,min,max){return Math.max(min,Math.min(max,value))}
-  function ease(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2}
+  function smoothstep(t){t=clamp(t,0,1);return t*t*t*(t*(t*6-15)+10)}
   function lerp(a,b,t){return a+(b-a)*t}
   function pointLerp(a,b,t){return{lat:lerp(a.lat,b.lat,t),lng:lerp(a.lng,b.lng,t)}}
   function headingLerp(a,b,t){let delta=((b-a+540)%360)-180;return(a+delta*t+360)%360}
@@ -26,9 +26,16 @@
     host.appendChild(card);
   }
 
-  function finishFlyover(targetHole){
+  function settleHoleWithoutSnap(targetHole){
     if(flyoverFrame)cancelAnimationFrame(flyoverFrame);flyoverFrame=null;flyoverActive=false;
-    removeFlyoverCard();s.hole=targetHole;showRoundHole();
+    removeFlyoverCard();
+    s.hole=targetHole;
+    /* Prevent the normal hole refresh/geolocation callbacks from immediately fighting
+       the final flyover camera. We release control after the UI has caught up. */
+    const priorUserMoved=inlineUserMovedMap;
+    inlineUserMovedMap=true;
+    showRoundHole();
+    setTimeout(()=>{inlineUserMovedMap=priorUserMoved;},850);
     const done=flyoverResolve;flyoverResolve=null;if(done)done(true);
   }
   window.skipHoleFlyover=function(){if(flyoverActive&&flyoverResolve)flyoverResolve('skip')};
@@ -38,23 +45,39 @@
       const course=selectedRoundCourse(),green=course?.greens?.[targetHole-1],tee=selectedTee(green);
       if(!green||!tee||!green.center||inlineHoleMap?.provider!=='google'||!inlineHoleMap.raw){resolve(false);return;}
       const raw=inlineHoleMap.raw,startCenter=inlineHoleMap.getCenter?.()||tee,startZoom=Number(raw.getZoom?.()||18),startHeading=Number(raw.getHeading?.()||0),startTilt=Number(raw.getTilt?.()||67.5);
-      const destination=flyoverCenter(green),heading=targetHeading(green),cruiseZoom=clamp(startZoom-2.1,15.5,17),finalZoom=clamp(startZoom,17.3,19),par=Number(s.pars[targetHole-1])||4,yards=targetYards(green);
+      const destination=flyoverCenter(green),heading=targetHeading(green),cruiseZoom=clamp(startZoom-1.75,15.8,17.25),finalZoom=clamp(startZoom,17.3,19),par=Number(s.pars[targetHole-1])||4,yards=targetYards(green);
       showFlyoverCard(targetHole,par,yards);stopLocation();flyoverActive=true;flyoverResolve=resolve;
       const started=performance.now();
       function frame(now){
         if(!flyoverActive){resolve(false);return;}
-        if(flyoverResolve===null){finishFlyover(targetHole);return;}
-        const elapsed=now-started,t=clamp(elapsed/FLYOVER_MS,0,1);
+        if(flyoverResolve===null){settleHoleWithoutSnap(targetHole);return;}
+        const t=clamp((now-started)/FLYOVER_MS,0,1);
         let center,zoom,tilt,cameraHeading;
-        if(t<.28){const p=ease(t/.28);center=pointLerp(startCenter,startCenter,p);zoom=lerp(startZoom,cruiseZoom,p);tilt=lerp(startTilt,38,p);cameraHeading=headingLerp(startHeading,heading,p*.35);}
-        else if(t<.76){const p=ease((t-.28)/.48);center=pointLerp(startCenter,destination,p);zoom=cruiseZoom;tilt=lerp(38,48,p);cameraHeading=headingLerp(startHeading,heading,.35+.65*p);}
-        else{const p=ease((t-.76)/.24);center=destination;zoom=lerp(cruiseZoom,finalZoom,p);tilt=lerp(48,67.5,p);cameraHeading=heading;}
+        if(t<.24){
+          const p=smoothstep(t/.24);
+          center=startCenter;
+          zoom=lerp(startZoom,cruiseZoom,p);
+          tilt=lerp(startTilt,34,p);
+          cameraHeading=headingLerp(startHeading,heading,p*.28);
+        }else if(t<.68){
+          const p=smoothstep((t-.24)/.44);
+          center=pointLerp(startCenter,destination,p);
+          zoom=cruiseZoom;
+          tilt=lerp(34,43,p);
+          cameraHeading=headingLerp(startHeading,heading,.28+.62*p);
+        }else{
+          const p=smoothstep((t-.68)/.32);
+          center=pointLerp(pointLerp(startCenter,destination,1),destination,p);
+          zoom=lerp(cruiseZoom,finalZoom,p);
+          tilt=lerp(43,67.5,p);
+          cameraHeading=headingLerp(headingLerp(startHeading,heading,.9),heading,p);
+        }
         try{raw.moveCamera({center,zoom,heading:cameraHeading,tilt});}catch{}
-        if(t>=1){finishFlyover(targetHole);return;}
+        if(t>=1){settleHoleWithoutSnap(targetHole);return;}
         flyoverFrame=requestAnimationFrame(frame);
       }
       const originalResolve=flyoverResolve;
-      flyoverResolve=value=>{if(value==='skip'){finishFlyover(targetHole);return;}originalResolve(value)};
+      flyoverResolve=value=>{if(value==='skip'){settleHoleWithoutSnap(targetHole);return;}originalResolve(value)};
       flyoverFrame=requestAnimationFrame(frame);
     });
   }
