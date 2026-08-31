@@ -1,6 +1,6 @@
-/* Version 131: cinematic hole-to-hole camera flyover with a no-snap landing handoff. */
+/* Version 132: complete the helicopter travel first, then settle into the next hole. */
 (function(){
-  const FLYOVER_MS=3450;
+  const FLYOVER_MS=4200;
   let flyoverFrame=null,flyoverResolve=null,flyoverActive=false;
 
   function reducedMotion(){return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches}
@@ -26,15 +26,10 @@
     host.appendChild(card);
   }
 
-  /* Update the existing round UI in place after the camera arrives. The previous
-     version called showRoundHole(), which let the normal camera-orientation path
-     immediately reassert itself. That second camera command is the snap visible
-     in the screen recording. */
   function adoptArrivedHole(targetHole){
     const course=selectedRoundCourse(),green=course?.greens?.[targetHole-1],par=Number(s.pars[targetHole-1])||4;
     if(!green||!selectedTee(green)||!green.center){s.hole=targetHole;showRoundHole();return;}
-    s.hole=targetHole;
-    stopLocation();
+    s.hole=targetHole;stopLocation();
     const yards=mappedHoleDistance(green);
     if($('roundMapHole'))$('roundMapHole').textContent=targetHole;
     if($('roundMapDistance'))$('roundMapDistance').textContent=yards;
@@ -49,22 +44,15 @@
       try{inlineHoleMap.raw.setMapTypeId(liveMapStyle);}catch{}
       drawGoogleLiveHole(green);
     }
-    const segment=activeRouteSegment(null,green);
-    if(segment)loadWeather(segment.origin,segment.target,segment.origin);
+    const segment=activeRouteSegment(null,green);if(segment)loadWeather(segment.origin,segment.target,segment.origin);
     save();
-    /* Give Google one quiet second after landing before GPS/orientation callbacks
-       are allowed to steer the camera again. */
     const priorUserMoved=inlineUserMovedMap;inlineUserMovedMap=true;
-    setTimeout(()=>{
-      inlineUserMovedMap=priorUserMoved;
-      startLocation(green);
-    },1100);
+    setTimeout(()=>{inlineUserMovedMap=priorUserMoved;startLocation(green);},1400);
   }
 
-  function settleHoleWithoutSnap(targetHole){
+  function finishFlyover(targetHole){
     if(flyoverFrame)cancelAnimationFrame(flyoverFrame);flyoverFrame=null;flyoverActive=false;
-    removeFlyoverCard();
-    adoptArrivedHole(targetHole);
+    removeFlyoverCard();adoptArrivedHole(targetHole);
     const done=flyoverResolve;flyoverResolve=null;if(done)done(true);
   }
   window.skipHoleFlyover=function(){if(flyoverActive&&flyoverResolve)flyoverResolve('skip')};
@@ -74,27 +62,51 @@
       const course=selectedRoundCourse(),green=course?.greens?.[targetHole-1],tee=selectedTee(green);
       if(!green||!tee||!green.center||inlineHoleMap?.provider!=='google'||!inlineHoleMap.raw){resolve(false);return;}
       const raw=inlineHoleMap.raw,startCenter=inlineHoleMap.getCenter?.()||tee,startZoom=Number(raw.getZoom?.()||18),startHeading=Number(raw.getHeading?.()||0),startTilt=Number(raw.getTilt?.()||67.5);
-      const destination=flyoverCenter(green),heading=targetHeading(green),cruiseZoom=clamp(startZoom-1.65,15.9,17.35),finalZoom=clamp(startZoom,17.3,19),par=Number(s.pars[targetHole-1])||4,yards=targetYards(green);
+      const destination=flyoverCenter(green),heading=targetHeading(green),cruiseZoom=clamp(startZoom-1.8,15.7,17.2),finalZoom=clamp(startZoom,17.3,19),par=Number(s.pars[targetHole-1])||4,yards=targetYards(green);
       showFlyoverCard(targetHole,par,yards);stopLocation();flyoverActive=true;flyoverResolve=resolve;
       const started=performance.now();
       function frame(now){
         if(!flyoverActive){resolve(false);return;}
-        if(flyoverResolve===null){settleHoleWithoutSnap(targetHole);return;}
+        if(flyoverResolve===null){finishFlyover(targetHole);return;}
         const t=clamp((now-started)/FLYOVER_MS,0,1);
         let center,zoom,tilt,cameraHeading;
-        if(t<.23){
-          const p=smoothstep(t/.23);center=startCenter;zoom=lerp(startZoom,cruiseZoom,p);tilt=lerp(startTilt,35,p);cameraHeading=headingLerp(startHeading,heading,p*.25);
-        }else if(t<.66){
-          const p=smoothstep((t-.23)/.43);center=pointLerp(startCenter,destination,p);zoom=cruiseZoom;tilt=lerp(35,44,p);cameraHeading=headingLerp(startHeading,heading,.25+.63*p);
-        }else{
-          const p=smoothstep((t-.66)/.34);center=destination;zoom=lerp(cruiseZoom,finalZoom,p);tilt=lerp(44,67.5,p);cameraHeading=headingLerp(headingLerp(startHeading,heading,.88),heading,p);
+
+        /* 1) Rise vertically over the current hole. */
+        if(t<.18){
+          const p=smoothstep(t/.18);
+          center=startCenter;
+          zoom=lerp(startZoom,cruiseZoom,p);
+          tilt=lerp(startTilt,34,p);
+          cameraHeading=headingLerp(startHeading,heading,p*.20);
+        }
+        /* 2) Complete the actual flight to the next hole at a stable altitude.
+           No descent and no zoom-in happen while the map is still travelling. */
+        else if(t<.70){
+          const p=smoothstep((t-.18)/.52);
+          center=pointLerp(startCenter,destination,p);
+          zoom=cruiseZoom;
+          tilt=34;
+          cameraHeading=headingLerp(startHeading,heading,.20+.80*p);
+        }
+        /* 3) Brief arrival hold. We are fully at the next hole before settling. */
+        else if(t<.76){
+          center=destination;zoom=cruiseZoom;tilt=34;cameraHeading=heading;
+        }
+        /* 4) Settle straight down in place: center and heading are locked.
+           Only zoom and tilt change, which prevents the late diagonal lurch. */
+        else{
+          const p=smoothstep((t-.76)/.24);
+          center=destination;
+          zoom=lerp(cruiseZoom,finalZoom,p);
+          tilt=lerp(34,67.5,p);
+          cameraHeading=heading;
         }
         try{raw.moveCamera({center,zoom,heading:cameraHeading,tilt});}catch{}
-        if(t>=1){settleHoleWithoutSnap(targetHole);return;}
+        if(t>=1){finishFlyover(targetHole);return;}
         flyoverFrame=requestAnimationFrame(frame);
       }
       const originalResolve=flyoverResolve;
-      flyoverResolve=value=>{if(value==='skip'){settleHoleWithoutSnap(targetHole);return;}originalResolve(value)};
+      flyoverResolve=value=>{if(value==='skip'){finishFlyover(targetHole);return;}originalResolve(value)};
       flyoverFrame=requestAnimationFrame(frame);
     });
   }
