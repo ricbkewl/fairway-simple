@@ -810,6 +810,7 @@ function round(){
   if(s.done){s.v='recap';recap();return}
   ensureCurrentHolePar();const h=s.hole,p=s.pars[h-1],c=selectedRoundCourse(),green=c?.greens?.[h-1];app.classList.add('round-fullscreen');
   app.innerHTML=green?liveHoleMapPanel(green,h,p):`<section class="live-hole-map missing-hole-map"><b>Hole map unavailable</b><span>An administrator needs to map Hole ${h}.</span></section>`;
+  if(green){const attribution=document.createElement('a');attribution.className='hole-map-attribution hidden';attribution.href='https://www.maptiler.com/copyright/';attribution.target='_blank';attribution.rel='noopener';attribution.textContent='© MapTiler · © OpenStreetMap';document.querySelector('.live-hole-map')?.append(attribution)}
   const summary=document.querySelector('.round-map-summary');if(summary&&c){const strip=document.createElement('div');strip.className='round-course-name-strip';strip.textContent=c.name;summary.after(strip);requestAnimationFrame(positionRoundCourseNameStrip)}
   updateSyncIndicator();if(green){initInlineHoleMap(green);const segment=activeRouteSegment(null,green);if(segment)loadWeather(segment.origin,segment.target,segment.origin);startLocation(green)}
 }
@@ -880,7 +881,7 @@ function googlePlannerIcon(){
 }
 function googlePlannerLabelIcon(kind,yards='—',club='—'){
   const width=116,height=78,label=kind==='hit'?t('toHit'):t('toGo'),safeLabel=String(label).replace(/[&<>"']/g,'').slice(0,18),safeClub=String(club).replace(/[&<>"']/g,''),safeYards=String(yards).replace(/[^0-9—]/g,'');
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect x="1" y="1" width="114" height="76" rx="12" fill="#0c1410" fill-opacity=".9" stroke="#f5cf68" stroke-opacity=".65"/><text x="58" y="25" text-anchor="middle" fill="#f5cf68" font-family="Arial,sans-serif" font-size="22" font-weight="800">${safeYards}</text><text x="58" y="37" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="10" font-weight="800">yd</text><text x="58" y="49" text-anchor="middle" fill="#d6e1db" font-family="Arial,sans-serif" font-size="7" font-weight="800">${safeLabel}</text><line x1="14" y1="56" x2="102" y2="56" stroke="#f5cf68" stroke-opacity=".72"/><text x="58" y="70" text-anchor="middle" fill="#a9efc9" font-family="Arial,sans-serif" font-size="11" font-weight="800">${safeClub}</text></svg>`;
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect x="1" y="1" width="114" height="76" rx="12" fill="#0c1410" fill-opacity=".42" stroke="#ffffff" stroke-opacity=".18"/><text x="58" y="25" text-anchor="middle" fill="#f5cf68" font-family="Arial,sans-serif" font-size="22" font-weight="800">${safeYards}</text><text x="58" y="37" text-anchor="middle" fill="#fff" font-family="Arial,sans-serif" font-size="10" font-weight="800">yd</text><text x="58" y="49" text-anchor="middle" fill="#e4eee9" font-family="Arial,sans-serif" font-size="7" font-weight="800">${safeLabel}</text><line x1="14" y1="56" x2="102" y2="56" stroke="#f5cf68" stroke-opacity=".72"/><text x="58" y="70" text-anchor="middle" fill="#a9efc9" font-family="Arial,sans-serif" font-size="11" font-weight="800">${safeClub}</text></svg>`;
   return{url:`data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,size:new google.maps.Size(width,height),scaledSize:new google.maps.Size(width,height),anchor:new google.maps.Point(width+34,height/2)};
 }
 function googlePlannerLabelMarker(rawMap,position,kind){
@@ -918,9 +919,6 @@ function fitLiveHoleView(green){
 function resetLiveHoleView(){fitLiveHoleView(inlineHoleGreen)}
 function setLiveMapStyle(style){
   liveMapStyle=style==='terrain'?'terrain':'satellite';localStorage.atgLiveMapStyle=liveMapStyle;
-  if(inlineHoleMap?.provider==='google'){
-    inlineHoleMap.raw.setMapTypeId(liveMapStyle);document.querySelectorAll('.live-map-style-toggle button').forEach(button=>button.classList.toggle('on',button.getAttribute('onclick')?.includes(`'${liveMapStyle}'`)));fitLiveHoleView(inlineHoleGreen);return;
-  }
   render();
 }
 function enableForwardMapDragging(){
@@ -936,8 +934,8 @@ function initInlineHoleMapLeaflet(green){
   const container=$('liveHoleMap');if(!container||!selectedTee(green)||!green?.center||!window.L)return;
   inlineHoleMap=L.map(container,{zoomControl:false,zoomSnap:.25,dragging:false,scrollWheelZoom:false,doubleClickZoom:'center',boxZoom:false,keyboard:false,touchZoom:'center',attributionControl:false});
   inlineHoleGreen=green;
-  const useStreetAttribution=(fallback=false)=>{const label=document.querySelector('.forward-label'),credit=document.querySelector('.hole-map-attribution');if(label)label.textContent=fallback?'SATELLITE UNAVAILABLE · MAP VIEW · FORWARD':'MAP VIEW · FAIRWAY ROUTE · FORWARD';if(credit){credit.textContent='© OpenStreetMap';credit.href='https://www.openstreetmap.org/copyright/'}};
-  if(liveMapStyle==='satellite'&&MAPTILER_API_KEY)addSatelliteLayer(inlineHoleMap,()=>useStreetAttribution(true));else{addStreetLayer(inlineHoleMap);useStreetAttribution(false)}
+  const useAttribution=(provider,fallback=false)=>{const label=document.querySelector('.forward-label'),credit=document.querySelector('.hole-map-attribution');if(label)label.textContent=fallback?'MAPTILER UNAVAILABLE · OPEN MAP · FORWARD':provider==='maptiler'?'MAPTILER COURSE MAP · FAIRWAY ROUTE · FORWARD':'OPEN COURSE MAP · FAIRWAY ROUTE · FORWARD';if(credit){credit.classList.remove('hidden');credit.textContent=provider==='maptiler'?'© MapTiler · © OpenStreetMap':'© OpenStreetMap';credit.href=provider==='maptiler'?'https://www.maptiler.com/copyright/':'https://www.openstreetmap.org/copyright/'}};
+  if(liveMapStyle==='satellite'&&MAPTILER_API_KEY){addSatelliteLayer(inlineHoleMap,()=>useAttribution('osm',true));useAttribution('maptiler')}else if(MAPTILER_API_KEY){addCourseMapLayer(inlineHoleMap,()=>useAttribution('osm',true));useAttribution('maptiler')}else{addStreetLayer(inlineHoleMap);useAttribution('osm')}
   fitLiveHoleView(green);
   L.circleMarker(selectedTee(green),{radius:9,color:'#fff',weight:3,fillColor:'#d8a93e',fillOpacity:1}).addTo(inlineHoleMap);
   for(const aim of[green.aim1,green.aim2].filter(Boolean))L.circleMarker(aim,{radius:8,color:'#fff',weight:3,fillColor:'#e0bd66',fillOpacity:1}).addTo(inlineHoleMap);
@@ -967,6 +965,7 @@ function drawGoogleLiveHole(green){
 }
 async function initInlineHoleMap(green){
   const container=$('liveHoleMap'),key=shotPlannerKey();if(!container||!selectedTee(green)||!green?.center)return;
+  if(liveMapStyle==='terrain'){document.querySelector('.live-map-viewport')?.classList.remove('google-map-active');initInlineHoleMapLeaflet(green);return}
   try{
     await loadGoogleMaps();if($('liveHoleMap')!==container||shotPlannerKey()!==key)return;
     document.querySelector('.live-map-viewport')?.classList.add('google-map-active');
@@ -1282,6 +1281,10 @@ function setMapStyle(style){
   render();
 }
 function addStreetLayer(targetMap){return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:20,attribution:'© OpenStreetMap'}).addTo(targetMap)}
+function addCourseMapLayer(targetMap,onFallback){
+  const layer=L.tileLayer(`https://api.maptiler.com/maps/outdoor-v2/256/{z}/{x}/{y}@2x.png?key=${encodeURIComponent(MAPTILER_API_KEY)}`,{tileSize:256,maxZoom:22,crossOrigin:true,attribution:'© MapTiler · © OpenStreetMap'});let failures=0,fellBack=false;
+  layer.on('tileerror',()=>{if(fellBack||++failures<3)return;fellBack=true;targetMap.removeLayer(layer);addStreetLayer(targetMap);if(onFallback)onFallback()});return layer.addTo(targetMap)
+}
 function addSatelliteLayer(targetMap,onFallback){
   const layer=L.tileLayer(`https://api.maptiler.com/maps/satellite/256/{z}/{x}/{y}@2x.jpg?key=${encodeURIComponent(MAPTILER_API_KEY)}`,{tileSize:256,maxZoom:22,crossOrigin:true,attribution:'<a href="https://www.maptiler.com/copyright/" target="_blank">© MapTiler</a>'});let failures=0,fellBack=false;
   layer.on('tileerror',()=>{if(fellBack||++failures<3)return;fellBack=true;targetMap.removeLayer(layer);addStreetLayer(targetMap);if(onFallback)onFallback()});return layer.addTo(targetMap);
