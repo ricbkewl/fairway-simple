@@ -1,6 +1,6 @@
-/* Version 133: faster helicopter flyover with a frame-perfect landing handoff. */
+/* Version 137: faster helicopter flyover ending on the exact normal hole camera. */
 (function(){
-  const FLYOVER_MS=2850;
+  const FLYOVER_MS=2750;
   let flyoverFrame=null,flyoverResolve=null,flyoverActive=false;
 
   function reducedMotion(){return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches}
@@ -10,10 +10,12 @@
   function lerp(a,b,t){return a+(b-a)*t}
   function pointLerp(a,b,t){return{lat:lerp(a.lat,b.lat,t),lng:lerp(a.lng,b.lng,t)}}
   function headingLerp(a,b,t){let delta=((b-a+540)%360)-180;return(a+delta*t+360)%360}
-  function routeTarget(green){const route=holeRoute(green);return route[1]||green.center}
-  function flyoverCenter(green){const tee=selectedTee(green),target=routeTarget(green)||green.center;return tee&&target?pointBetween(tee,target,.42):(tee||green.center)}
-  function targetHeading(green){const tee=selectedTee(green),target=routeTarget(green)||green.center;return tee&&target?bearingDegrees(tee,target):0}
   function targetYards(green){return mappedHoleDistance(green)||Math.round(distanceYards(selectedTee(green),green.center))}
+  function finalCamera(green){
+    if(typeof window.atgHoleFinalCamera==='function')return window.atgHoleFinalCamera(green);
+    const tee=selectedTee(green),target=holeRoute(green)[1]||green.center,yards=targetYards(green);
+    return{center:pointBetween(tee,target,.46),zoom:18,heading:bearingDegrees(tee,target),tilt:67.5,yards};
+  }
 
   function removeFlyoverCard(){document.querySelector('.hole-flyover-card')?.remove();document.querySelector('.live-hole-map')?.classList.remove('hole-flyover-active')}
   function showFlyoverCard(hole,par,yards){
@@ -26,9 +28,6 @@
     host.appendChild(card);
   }
 
-  /* Adopt the next hole while the helicopter is already hovering over it. This
-     lets the overlays, score, weather and route change before the final descent,
-     so the very last flyover frame is also the first settled-hole frame. */
   function adoptNextHoleBeforeLanding(targetHole){
     const course=selectedRoundCourse(),green=course?.greens?.[targetHole-1],par=Number(s.pars[targetHole-1])||4;
     if(!green||!selectedTee(green)||!green.center)return false;
@@ -48,21 +47,16 @@
       drawGoogleLiveHole(green);
     }
     const segment=activeRouteSegment(null,green);if(segment)loadWeather(segment.origin,segment.target,segment.origin);
-    save();
-    return true;
+    save();return true;
   }
 
   function finishFlyover(targetHole,green){
     if(flyoverFrame)cancelAnimationFrame(flyoverFrame);flyoverFrame=null;flyoverActive=false;
     removeFlyoverCard();
-    /* Crucial: do not call showRoundHole(), orientInlineHoleMap(), fitBounds(), or
-       moveCamera() here. The final animation camera is left completely untouched. */
     if(s.hole!==targetHole)adoptNextHoleBeforeLanding(targetHole);
-    const priorUserMoved=inlineUserMovedMap;
+    /* Keep automatic GPS camera steering off after arrival. The map is already on
+       the same deterministic camera the normal hole view uses. */
     inlineUserMovedMap=true;
-    /* GPS may resume immediately, but it is not allowed to steer the camera after
-       the flyover. The view stays exactly on the last animation frame until the
-       golfer explicitly recenters or changes hole again. */
     try{startLocation(green);}catch{}
     const done=flyoverResolve;flyoverResolve=null;if(done)done(true);
   }
@@ -70,48 +64,38 @@
 
   function runGoogleFlyover(targetHole){
     return new Promise(resolve=>{
-      const course=selectedRoundCourse(),green=course?.greens?.[targetHole-1],tee=selectedTee(green);
-      if(!green||!tee||!green.center||inlineHoleMap?.provider!=='google'||!inlineHoleMap.raw){resolve(false);return;}
+      const course=selectedRoundCourse(),green=course?.greens?.[targetHole-1],tee=selectedTee(green),camera=finalCamera(green);
+      if(!green||!tee||!green.center||!camera||inlineHoleMap?.provider!=='google'||!inlineHoleMap.raw){resolve(false);return;}
       const raw=inlineHoleMap.raw,startCenter=inlineHoleMap.getCenter?.()||tee,startZoom=Number(raw.getZoom?.()||18),startHeading=Number(raw.getHeading?.()||0),startTilt=Number(raw.getTilt?.()||67.5);
-      const destination=flyoverCenter(green),heading=targetHeading(green),cruiseZoom=clamp(startZoom-1.7,15.8,17.25),finalZoom=clamp(startZoom,17.3,19),par=Number(s.pars[targetHole-1])||4,yards=targetYards(green);
+      const destination=camera.center,heading=camera.heading,finalZoom=camera.zoom,cruiseZoom=clamp(finalZoom-1.55,15.8,17.3),par=Number(s.pars[targetHole-1])||4,yards=camera.yards||targetYards(green);
       showFlyoverCard(targetHole,par,yards);stopLocation();flyoverActive=true;flyoverResolve=resolve;
       const started=performance.now();let adopted=false;
       function frame(now){
         if(!flyoverActive){resolve(false);return;}
         const t=clamp((now-started)/FLYOVER_MS,0,1);
         let center,zoom,tilt,cameraHeading;
-
-        /* Fast rise. */
-        if(t<.14){
-          const p=smoothstep(t/.14);
-          center=startCenter;zoom=lerp(startZoom,cruiseZoom,p);tilt=lerp(startTilt,32,p);cameraHeading=headingLerp(startHeading,heading,p*.18);
-        }
-        /* Fast, clean travel all the way to the next hole. */
-        else if(t<.64){
-          const p=smoothstep((t-.14)/.50);
-          center=pointLerp(startCenter,destination,p);zoom=cruiseZoom;tilt=32;cameraHeading=headingLerp(startHeading,heading,.18+.82*p);
-        }
-        /* Hover at the exact destination. Swap the hole content here, not after landing. */
-        else if(t<.71){
-          center=destination;zoom=cruiseZoom;tilt=32;cameraHeading=heading;
-          if(!adopted){adopted=adoptNextHoleBeforeLanding(targetHole);}
-        }
-        /* Settle vertically. Destination and heading never change again. */
-        else{
-          if(!adopted){adopted=adoptNextHoleBeforeLanding(targetHole);}
-          const p=smoothstep((t-.71)/.29);
-          center=destination;zoom=lerp(cruiseZoom,finalZoom,p);tilt=lerp(32,67.5,p);cameraHeading=heading;
+        if(t<.13){
+          const p=smoothstep(t/.13);center=startCenter;zoom=lerp(startZoom,cruiseZoom,p);tilt=lerp(startTilt,31,p);cameraHeading=headingLerp(startHeading,heading,p*.16);
+        }else if(t<.62){
+          const p=smoothstep((t-.13)/.49);center=pointLerp(startCenter,destination,p);zoom=cruiseZoom;tilt=31;cameraHeading=headingLerp(startHeading,heading,.16+.84*p);
+        }else if(t<.69){
+          center=destination;zoom=cruiseZoom;tilt=31;cameraHeading=heading;
+          if(!adopted)adopted=adoptNextHoleBeforeLanding(targetHole);
+        }else{
+          if(!adopted)adopted=adoptNextHoleBeforeLanding(targetHole);
+          const p=smoothstep((t-.69)/.31);
+          center=destination;zoom=lerp(cruiseZoom,finalZoom,p);tilt=lerp(31,camera.tilt,p);cameraHeading=heading;
         }
         try{raw.moveCamera({center,zoom,heading:cameraHeading,tilt});}catch{}
         if(t>=1){
-          /* Write the exact final camera once, then never touch it during handoff. */
-          try{raw.moveCamera({center:destination,zoom:finalZoom,heading,tilt:67.5});}catch{}
+          /* This is both the last animation frame and the normal next-hole camera. */
+          try{raw.moveCamera(camera);}catch{}
           finishFlyover(targetHole,green);return;
         }
         flyoverFrame=requestAnimationFrame(frame);
       }
       const originalResolve=flyoverResolve;
-      flyoverResolve=value=>{if(value==='skip'){if(!adopted)adoptNextHoleBeforeLanding(targetHole);try{raw.moveCamera({center:destination,zoom:finalZoom,heading,tilt:67.5});}catch{}finishFlyover(targetHole,green);return;}originalResolve(value)};
+      flyoverResolve=value=>{if(value==='skip'){if(!adopted)adoptNextHoleBeforeLanding(targetHole);try{raw.moveCamera(camera);}catch{}finishFlyover(targetHole,green);return;}originalResolve(value)};
       flyoverFrame=requestAnimationFrame(frame);
     });
   }
@@ -126,6 +110,5 @@
   const priorPrev129=prev,priorNext129=next;
   prev=function(){if(s.hole>1)return moveHoleWithFlyover(s.hole-1);return priorPrev129();};
   next=function(){if(s.hole<s.holes)return moveHoleWithFlyover(s.hole+1);return priorNext129();};
-
   window.setHoleFlyoverEnabled=function(enabled){localStorage.atgHoleFlyover=enabled?'on':'off';};
 })();
