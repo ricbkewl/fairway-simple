@@ -1,6 +1,5 @@
-/* Version 111: Royale Jakarta mapping safety reset.
-   The previous Royale GPS endpoints were diagram-derived estimates and are not reliable enough for live play.
-   Keep verified route/scorecard data, but disable GPS until every hole is remapped against satellite imagery. */
+/* Version 121: Royale Jakarta mapping safety gate.
+   Diagram-derived GPS remains quarantined, but independently verified North/West/South loop maps may be used once complete. */
 (function(){
   const priorRoyaleRoundCourse=royaleRoundCourse;
 
@@ -13,7 +12,7 @@
   if(royaleCatalog){
     royaleCatalog.greens=[];
     royaleCatalog.catalogOnly=true;
-    royaleCatalog.catalog_note='Official scorecard and route data retained. Live GPS temporarily disabled while North, South and West are remapped hole-by-hole against verified satellite imagery.';
+    royaleCatalog.catalog_note='Official scorecard and route data retained. Live GPS is enabled only from completed manual North, South and West loop maps.';
   }
 
   const priorRound=round;
@@ -23,8 +22,11 @@
     if(!isRoyale){priorRound();return;}
     if(s.done){s.v='recap';recap();return;}
 
+    const liveCourse=royaleRoundCourse(route||'west-south');
+    if(liveCourse?.greens?.length===liveCourse?.holes&&mappedCount(liveCourse)===liveCourse.holes){priorRound();return;}
+
     ensureCurrentHolePar();
-    const h=s.hole,p=Number(s.pars[h-1])||4,c=royaleRoundCourse(route||'west-south');
+    const h=s.hole,p=Number(s.pars[h-1])||4,c=liveCourse;
     const meters=Number(c.tee_meters?.[s.teeSet||'black']?.[h-1]||c.tee_meters?.black?.[h-1]||0);
     const yards=meters?Math.round(meters*1.0936133):'—';
     app.classList.add('round-fullscreen','royale-scorecard-play');
@@ -40,7 +42,7 @@
       <div class="royale-mapping-review-card">
         <span class="royale-review-icon">⛳</span>
         <b>GPS mapping under review</b>
-        <p>We found that the previous Royale Jakarta hole coordinates were not reliable enough for live guidance. Scorecard play remains available while North, South and West are remapped accurately.</p>
+        <p>This selected Royale Jakarta route includes a nine that is not yet fully remapped. Scorecard play remains available while North, South and West are completed independently.</p>
         <small>Official par and tee-distance data are preserved.</small>
       </div>
       <div class="hole-edge-navigation" aria-label="Change hole">
@@ -51,6 +53,5 @@
     </section>`;
   };
 
-  /* Repair an already-open Royale round immediately so the bad map is not shown again. */
   if(s?.v==='round'&&(s.catalogCourseId==='catalog-royale-jakarta'||royaleRouteFromCourseName(s.course)))setTimeout(()=>render(),0);
 })();
