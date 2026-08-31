@@ -160,6 +160,15 @@ const I18N={
 };
 const START_NEW_ROUND_LABELS={en:'Start New Round',es:'Iniciar nueva ronda',zh:'开始新球局',id:'Mulai Ronde Baru',hi:'नया राउंड शुरू करें',fr:'Commencer une nouvelle partie'};
 function startNewRoundLabel(){return START_NEW_ROUND_LABELS[appLanguage]||START_NEW_ROUND_LABELS.en}
+const MENU_EXTRA_LABELS={
+  en:{clubs:'My Clubs',manage:'Manage / End Round'},
+  es:{clubs:'Mis palos',manage:'Gestionar / finalizar ronda'},
+  zh:{clubs:'我的球杆',manage:'管理 / 结束球局'},
+  id:{clubs:'Klub Saya',manage:'Kelola / Akhiri Ronde'},
+  hi:{clubs:'मेरे क्लब',manage:'राउंड प्रबंधित / समाप्त करें'},
+  fr:{clubs:'Mes clubs',manage:'Gérer / terminer la partie'}
+};
+function menuExtraLabel(key){return MENU_EXTRA_LABELS[appLanguage]?.[key]||MENU_EXTRA_LABELS.en[key]}
 let appLanguage=APP_LANGUAGES[localStorage.atgLanguage]?localStorage.atgLanguage:'en';
 document.documentElement.lang=appLanguage;
 function t(key){return I18N[appLanguage]?.[key]||I18N.en[key]||key}
@@ -174,7 +183,7 @@ let lastCourseSearch=0;
 let sharedPlayers=[];
 let historyRounds=[],historyDetail=null,historyLoading=false,historyError='',historyControlsReady=true;
 let registeredGolfers=[],registeredGolfersLoading=false,registeredGolfersError='';
-let golferProfile=null,golferProfileError='',signupEmail='',usersReturnView='accountView',coursesReturnView='home';
+let golferProfile=null,golferProfileError='',signupEmail='',usersReturnView='accountView',coursesReturnView='home',clubsReturnView='accountView';
 let clubDistances={},clubProfileError='';
 let roundChannel=null,subscribedRoundId=null,realtimeTimer=null;
 let chatMessages=[],chatTimer=null,unreadChatCount=0,chatToastTimer=null,chatMediaReady=true;
@@ -255,7 +264,9 @@ function showAppMenu(){
 const showAppMenuWithoutNewRound=showAppMenu;
 showAppMenu=function(){
   showAppMenuWithoutNewRound();
-  const menu=document.querySelector('.app-side-menu'),coursesButton=[...(menu?.querySelectorAll(':scope > button')||[])].find(button=>button.getAttribute('onclick')?.includes('openCoursesFromNav'));
+  const menu=document.querySelector('.app-side-menu'),buttons=[...(menu?.querySelectorAll(':scope > button')||[])],teeButton=buttons.find(button=>button.getAttribute('onclick')?.includes('showTeePicker')),roundButton=buttons.find(button=>button.getAttribute('onclick')?.includes('openCurrentRound')),coursesButton=buttons.find(button=>button.getAttribute('onclick')?.includes('openCoursesFromNav'));
+  if(teeButton)teeButton.insertAdjacentHTML('afterend',`<button onclick="closeRoundQuickMenu();openClubs('round')" ${currentUser?'':'disabled'}><span>♣</span>${esc(menuExtraLabel('clubs'))}</button>`);
+  if(roundButton&&s.sharedRoundId)roundButton.insertAdjacentHTML('afterend',`<button onclick="closeRoundQuickMenu();openRoundManagement()"><span>⚙</span>${esc(menuExtraLabel('manage'))}</button>`);
   if(coursesButton)coursesButton.insertAdjacentHTML('afterend',`<button class="menu-start-round" onclick="closeRoundQuickMenu();start()"><span>＋</span>${esc(startNewRoundLabel())}</button>`)
 };
 function openAboutFromMenu(){closeRoundQuickMenu();goHome();requestAnimationFrame(()=>{const guide=document.querySelector('.app-guide');if(guide){guide.open=true;guide.scrollIntoView({behavior:'smooth',block:'start'})}})}
@@ -326,10 +337,12 @@ async function loadClubDistances(){
   if(error){clubProfileError='Club recommendations are not ready yet. Install the Supabase club-distance update first.';return}
   for(const item of data||[])clubDistances[item.club]=item.carry_yards;
 }
-function openClubs(){if(!currentUser){alert('Please sign in first.');return}s.v='clubsView';render()}
+function openClubs(returnView){if(!currentUser){alert('Please sign in first.');return}clubsReturnView=returnView||'accountView';s.v='clubsView';render()}
+function returnFromClubs(){if(clubsReturnView==='round'&&s.sharedRoundId&&!s.done){s.v='round';render();return}accountAction()}
 function clubsView(){
   if(!currentUser){s.v='home';render();return}
-  app.innerHTML=`<button class="back" onclick="accountAction()">← Account</button><h1>My Clubs</h1><p class="muted">Enter the distance you normally carry each club in the air. Leave clubs you do not carry blank.</p>${clubProfileError?`<div class="error-notice">${esc(clubProfileError)}</div>`:''}<section class="club-grid">${CLUBS.map(club=>`<label class="club-row"><span>${esc(club)}</span><span class="club-input"><input data-club="${esc(club)}" type="number" inputmode="numeric" min="20" max="350" step="1" value="${clubDistances[club]||''}" placeholder="—"><small>yd</small></span></label>`).join('')}</section><div class="notice">Recommendations use the distance to the center of the green. Wind, elevation, lie, hazards and rollout can change the right club.</div><button id="saveClubsButton" class="primary" onclick="saveClubDistances()" ${clubProfileError?'disabled':''}>Save My Clubs</button>`;
+  const backLabel=clubsReturnView==='round'&&s.sharedRoundId&&!s.done?'Round':'Account';
+  app.innerHTML=`<button class="back" onclick="returnFromClubs()">← ${backLabel}</button><h1>My Clubs</h1><p class="muted">Enter the distance you normally carry each club in the air. Leave clubs you do not carry blank.</p>${clubProfileError?`<div class="error-notice">${esc(clubProfileError)}</div>`:''}<section class="club-grid">${CLUBS.map(club=>`<label class="club-row"><span>${esc(club)}</span><span class="club-input"><input data-club="${esc(club)}" type="number" inputmode="numeric" min="20" max="350" step="1" value="${clubDistances[club]||''}" placeholder="—"><small>yd</small></span></label>`).join('')}</section><div class="notice">Recommendations use the distance to the center of the green. Wind, elevation, lie, hazards and rollout can change the right club.</div><button id="saveClubsButton" class="primary" onclick="saveClubDistances()" ${clubProfileError?'disabled':''}>Save My Clubs</button>`;
 }
 async function saveClubDistances(){
   const distances={};
@@ -345,7 +358,7 @@ async function saveClubDistances(){
   if(error){button.disabled=false;button.textContent='Save My Clubs';alert('Club distances could not be saved: '+error.message);return}
   clubDistances=distances;clubProfileError='';
   if(Object.keys(distances).length){const update=await db.auth.updateUser({data:{club_setup_complete:true}});if(!update.error)currentUser=update.data.user}
-  alert(Object.keys(distances).length?'Your club distances are saved. Live club suggestions are now ready.':'Your bag is empty, so club suggestions remain turned off.');accountAction();
+  alert(Object.keys(distances).length?'Your club distances are saved. Live club suggestions are now ready.':'Your bag is empty, so club suggestions remain turned off.');returnFromClubs();
 }
 function driverAllowedForCurrentShot(){
   const green=selectedRoundCourse()?.greens?.[s.hole-1];
