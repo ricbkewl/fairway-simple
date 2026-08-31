@@ -1,0 +1,30 @@
+/* Version 111: safe Royale Jakarta scorecard-only play mode */
+.royale-scorecard-play{overflow-x:hidden}
+.royale-safe-round{
+  position:relative;
+  min-height:100svh;
+  width:100%;
+  overflow:hidden;
+  background:radial-gradient(circle at 50% 20%,rgba(213,175,83,.16),transparent 34%),linear-gradient(155deg,#123f2b 0%,#0a2b20 62%,#071f18 100%);
+  color:#fff;
+}
+.royale-safe-round .round-map-summary{position:relative;top:auto;left:auto;right:auto;width:calc(100% - 20px);margin:12px 10px 0}
+.royale-safe-round .round-course-name-strip{position:relative;top:auto;left:auto;right:auto;margin:0 10px;width:calc(100% - 20px);text-align:center}
+.royale-mapping-review-card{
+  position:absolute;
+  left:50%;top:46%;transform:translate(-50%,-50%);
+  width:min(82vw,360px);
+  padding:22px 18px;
+  border:1px solid rgba(224,189,102,.34);
+  border-radius:18px;
+  background:rgba(255,255,255,.075);
+  box-shadow:0 18px 42px rgba(0,0,0,.28);
+  backdrop-filter:blur(12px);
+  text-align:center;
+}
+.royale-mapping-review-card .royale-review-icon{display:block;font-size:32px;margin-bottom:8px}
+.royale-mapping-review-card b{display:block;color:#f5dfa8;font-size:18px;margin-bottom:8px}
+.royale-mapping-review-card p{margin:0 0 8px;line-height:1.4;color:#e9f0ec;font-size:13px}
+.royale-mapping-review-card small{color:#bfd1c8}
+.royale-safe-round .round-score-stack{z-index:40}
+.royale-safe-round .hole-edge-navigation{z-index:30}
