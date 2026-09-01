@@ -650,3 +650,10 @@ main.round-fullscreen .live-hole-map{height:100dvh}.round-fullscreen .live-map-v
 .app-menu-round-tools button{font-weight:650}
 .app-side-menu>.menu-start-round{font-weight:650}
 .tee-choice{display:grid;width:100%;grid-template-columns:22px 1fr auto;gap:11px;align-items:center;margin:7px 0;padding:11px 12px;border:1px solid var(--line);border-radius:13px;background:#f8fbf9;color:var(--ink);font:inherit;text-align:left;cursor:pointer}.tee-choice.on{border-color:#c89d35;background:#fff8e4;box-shadow:0 0 0 1px rgba(200,157,53,.15)}.tee-choice span{display:flex;flex-direction:column}.tee-choice span b{font-size:14px}.tee-choice span small{color:var(--muted);font-size:10px}.tee-choice em{color:var(--g);font-size:10px;font-style:normal;font-weight:900}.tee-choice-dot{display:block;width:17px;height:17px;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 1px #9aa8a0}.tee-choice-dot.black{background:#111}.tee-choice-dot.blue{background:#2671d9}.tee-choice-dot.white{background:#fff}.tee-choice-dot.red{background:#d93636}
+
+/* Version 107: home feature pills link to their guide sections */
+.home-page .feature-pills button{display:flex;align-items:center;justify-content:center;width:auto;min-width:0;margin:0;padding:7px 10px;border:1px solid rgba(255,255,255,.1);border-radius:999px;background:rgba(255,255,255,.07);color:#d7e6de;font:inherit;font-size:11px;font-weight:750;line-height:1.2;text-align:center;cursor:pointer}
+.home-page .feature-pills button:hover,.home-page .feature-pills button:focus-visible{border-color:rgba(224,189,102,.65);background:rgba(224,189,102,.14);outline:none}
+@media(max-width:380px){.home-page .feature-pills button{padding:7px 5px;font-size:9px}}
+@keyframes guideLinkPulse{0%{background:rgba(224,189,102,.42);box-shadow:0 0 0 0 rgba(224,189,102,.4)}70%{background:rgba(224,189,102,.12);box-shadow:0 0 0 8px rgba(224,189,102,0)}100%{background:transparent;box-shadow:none}}
+.guide-body h3.guide-link-highlight{margin-left:-7px;margin-right:-7px;padding:7px;border-radius:9px;animation:guideLinkPulse 2.2s ease-out}
