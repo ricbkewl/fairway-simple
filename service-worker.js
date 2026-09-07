@@ -1,4 +1,4 @@
-const CACHE_NAME='agape-golf-v107';
+const CACHE_NAME='agape-golf-v149';
 const APP_SHELL=['./','./index.html','./guide-i18n.js','./app.js','./styles.css','./manifest.webmanifest','./agape-golf-logo.png','./rick-kulon-profile.jpg','./icon-192.png','./icon-512.png'];
 
 self.addEventListener('install',event=>{
@@ -6,7 +6,7 @@ self.addEventListener('install',event=>{
 });
 
 self.addEventListener('activate',event=>{
-  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));
+  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('agape-golf-')&&key!==CACHE_NAME).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));
 });
 
 self.addEventListener('fetch',event=>{

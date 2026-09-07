@@ -1246,7 +1246,7 @@ function filterSharedCourses(value){courseLibraryQuery=String(value||'').trim().
 function refreshCourseLibrary(){
   const grid=$('courseLibraryGrid');if(!grid)return;
   for(const previewMap of coursePreviewMaps){try{previewMap.remove()}catch{}}coursePreviewMaps=[];
-  const query=courseLibraryQuery,filtered=rankedSharedCourses().filter(item=>{const haystack=[item.course.name,item.course.city,item.course.state,item.course.postal_code,item.course.address].filter(Boolean).join(' ').toLowerCase();return(!query||haystack.includes(query))&&courseMatchesFilters(item.course)});
+  const query=courseLibraryQuery,filtered=rankedSharedCourses().filter(item=>{const haystack=[item.course.name,item.course.city,item.course.state,item.course.postal_code,item.course.address,item.course.country,item.course.country_code].filter(Boolean).join(' ').toLowerCase();return(!query||query.split(/\s+/).every(term=>haystack.includes(term)))&&courseMatchesFilters(item.course)});
   const visible=query||activeCourseFilterCount()?filtered:filtered.slice(0,7);
   grid.innerHTML=visible.map(item=>courseLibraryCard(item.course,item.index,item.distance)).join('');
   const empty=$('courseLibraryEmpty');if(empty)empty.classList.toggle('hidden',visible.length>0);
