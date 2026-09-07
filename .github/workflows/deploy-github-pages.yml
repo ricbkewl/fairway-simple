@@ -24,6 +24,7 @@ jobs:
       - name: Prepare runtime assets
         run: |
           mkdir _site
+          cp -r assets _site/
           cp *.html *.js *.css *.webmanifest *.png *.jpg _site/
           if [ -d data ]; then cp -r data _site/; fi
       - uses: actions/upload-pages-artifact@v4
