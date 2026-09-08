@@ -19,7 +19,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Verify shared library integration
-        run: node --test tests/shared-library.cjs
+        run: |
+          node --test tests/shared-library.cjs
+          node tests/smart-course-search-v184.mjs
       - uses: actions/configure-pages@v5
       - name: Prepare runtime assets
         run: |
