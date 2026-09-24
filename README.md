@@ -1,5 +1,12 @@
 # Agape Tumoutou Golfers
 
+> [!IMPORTANT]
+> **LEGACY / REFERENCE — NO PRODUCTION DEVELOPMENT**
+>
+> Agape Tumoutou Golfers (ATG) is preserved as a known-good reference implementation for ParFolio troubleshooting and historical comparison. New product features belong in ParFolio, not ATG. Changes to this repository should be limited to security fixes, data-preservation work, or explicitly approved reference-maintenance tasks.
+>
+> **Frozen reference snapshot:** `archive/atg-final-2026-09-24`
+
 ![Rick Kulon, app creator](rick-kulon-profile.jpg)
 
 A mobile-first fellowship golf companion created by Rick Kulon, featuring shared course mapping, live GPS yardages, protected individual scoring, group scorecards and private round chat.
